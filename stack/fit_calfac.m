@@ -3,7 +3,7 @@
 % get_cal_apf2nWpm2ps.
 
 flight = 40030;
-inst = 1;
+inst = 2;
 mypaths=get_paths(flight);
 savedir=(strcat(mypaths.ciberdir,'doc/20171018_stackihl/stackmaps/TM',...
     num2str(inst),'/'));
@@ -11,7 +11,7 @@ loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 load(strcat(loaddir,'maskdat'),'maskdat');
 load(sprintf('%sstackmapdat',loaddir),'stackmapdat');
 
-for ifield = 4:8
+for ifield = 8%4:8
 
 dt=get_dark_times(flight,inst,ifield);
 if ifield == 5

@@ -83,18 +83,18 @@ for ifield=4:8
 
     %%% hand mask bad pixels
     if inst==1 & ifield==8
-    mask=circular_mask(442,40,40,mask);
-    mask=circular_mask(742,342,10,mask);
+        mask=circular_mask(442,40,40,mask);
+        mask=circular_mask(742,342,10,mask);
     end
 
     if inst==2 & ifield==8
-    mask=circular_mask(450,395,10,mask);
-    mask=circular_mask(0,800,60,mask);
+        mask=circular_mask(450,395,10,mask);
+        mask=circular_mask(0,800,60,mask);
     end
 
     if inst==2 & ifield==5
-    mask=elliptical_mask(215,220,60,15,80,mask);
-    mask=elliptical_mask(710,90,80,20,60,mask);
+        mask=elliptical_mask(215,220,60,15,80,mask);
+        mask=elliptical_mask(710,90,80,20,60,mask);
     end
     
     stackmapdat(ifield).rawmap = long;

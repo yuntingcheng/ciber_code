@@ -2,7 +2,7 @@
 % fit the spherical average PSF profile with an analytic function.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 flight=40030;
-inst=1;
+inst=2;
 pixsize=0.7;
 dx = 1200;
 mypaths=get_paths(flight);

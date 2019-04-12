@@ -7,7 +7,7 @@ m_max_arr = [8:23];
 savedir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
     num2str(inst),'/');
 % linear interp to CIBER band
-%interp = 1;
+% interp = 1;
 % interp1 after correction & select with I/H band
 interp = 2;
 %%
@@ -64,6 +64,7 @@ for ifield=ifield_arr
 end
 
 %%
+
 m_min_arr = [0,7:21];
 m_max_arr = [7:22];
 PSmatch = 1;

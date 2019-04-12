@@ -112,7 +112,7 @@ for im=10:12
     stacksps=datasps./mdatas;
     stackgps=datagps./mdatag;
    %%   
-    
+   %{
     %%% plot the stacking maps %%%
     figure
     setwinsize(gcf,800,600)
@@ -159,7 +159,7 @@ for im=10:12
     savename=strcat(pltsavedir,dt.name,'_stackmaps',...
        num2str(m_min),'_',num2str(m_max),'_full');
     print(savename,'-dpng');close
-    
+    %}
     %% 
     
     %%% get the stacking profile %%%
@@ -194,32 +194,34 @@ for im=10:12
 end
 %%  get normalized profile
 mc = 0;
+sp = [1];
 for im=10:12
     mc = mc + 1;
+
+    prof = ihlprofdat.data(mc).profgcb;
+    prof_err = sqrt(ihlprofdat.data(mc).profgcb_err.^2);
+    ihlprofdat.norm(mc).profgcb = prof;
+    ihlprofdat.norm(mc).profgcb_err = prof_err;
+
     prof = ihlprofdat.data(mc).profscb;
     prof_err = sqrt(ihlprofdat.data(mc).profscb_err.^2);
-    norm = prof(1);prof = prof./norm;prof_err = prof_err./norm;
+    norm = mean(ihlprofdat.norm(mc).profgcb(sp))./mean(prof(sp));
+    prof = prof.*norm;prof_err = prof_err.*norm;
     ihlprofdat.norm(mc).profscb = prof;
     ihlprofdat.norm(mc).profscb_err = prof_err;
     
-    prof = ihlprofdat.data(mc).profgcb;
-    prof_err = sqrt(ihlprofdat.data(mc).profgcb_err.^2);
-    norm = prof(1);prof = prof./norm;prof_err = prof_err./norm;
-    ihlprofdat.norm(mc).profgcb = prof;
-    ihlprofdat.norm(mc).profgcb_err = prof_err;
-    
-    prof = ihlprofdat.data(mc).profsps;
-    prof_err = sqrt(ihlprofdat.data(mc).profsps_err.^2);
-    norm = prof(1);prof = prof./norm;prof_err = prof_err./norm;
-    ihlprofdat.norm(mc).profsps = prof;
-    ihlprofdat.norm(mc).profsps_err = prof_err;
-    
     prof = ihlprofdat.data(mc).profgps;
     prof_err = sqrt(ihlprofdat.data(mc).profgps_err.^2);
-    norm = prof(1);prof = prof./norm;prof_err = prof_err./norm;
     ihlprofdat.norm(mc).profgps = prof;
     ihlprofdat.norm(mc).profgps_err = prof_err;
-    
+
+    prof = ihlprofdat.data(mc).profsps;
+    prof_err = sqrt(ihlprofdat.data(mc).profsps_err.^2);
+    norm = mean(ihlprofdat.norm(mc).profgps(sp))./mean(prof(sp));
+    prof = prof.*norm;prof_err = prof_err.*norm;
+    ihlprofdat.norm(mc).profsps = prof;
+    ihlprofdat.norm(mc).profsps_err = prof_err;
+       
 end
 %% get excess profile
 mc = 0;
@@ -232,6 +234,8 @@ for im=1:3
     diffps_err = sqrt(ihlprofdat.norm(mc).profgps_err.^2 +...
                       ihlprofdat.norm(mc).profsps_err.^2);
     diff = diffcb - diffps;
+    % there are some numer issue, so force it to 0
+    diff(1) = 0;
     diff_err = sqrt(diffcb_err.^2 + diffps_err.^2);
     ihlprofdat.excess(mc).diffcb = diffcb;
     ihlprofdat.excess(mc).diffcb_err = diffcb_err;

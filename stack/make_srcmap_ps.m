@@ -47,11 +47,11 @@ end
 % use linear interpolated magnitude (but bin by y mag)
 if interp == 1
     if inst==1
-        mcb_arr = squeeze(M(:,11)');
+        mcb_arr = squeeze(M(:,14)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,12)');
+        mcb_arr = squeeze(M(:,15)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
@@ -59,15 +59,29 @@ if interp == 1
 end
 
 % use corrected magnitude
-if interp ==2
-    
+if interp == 2
     if inst==1
-        mlin_arr = squeeze(M(:,11)');
+        mcb_arr = squeeze(M(:,16)');
+        lambdaeff=1.05;
+        I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mlin_arr = squeeze(M(:,12)');
+        mcb_arr = squeeze(M(:,17)');
+        lambdaeff=1.79;
+        I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
-[m_arr, I_arr] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+    m_arr = mcb_arr;
 end
+
+% if interp ==2
+%     
+%     if inst==1
+%         mlin_arr = squeeze(M(:,11)');
+%     else
+%         mlin_arr = squeeze(M(:,12)');
+%     end
+% [m_arr, I_arr] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+% end
+%
 
 %%% select cat data %%%
 sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type ...

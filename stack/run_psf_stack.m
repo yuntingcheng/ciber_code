@@ -14,8 +14,10 @@ mask_inst_clip = stackmapdat(ifield).mask_inst_clip;
 [tmmask,tmnum] = make_mask_2m(flight,inst,'y',ifield,0,18);
 strmask = tmmask;
 strnum = tmnum;
+mask_inst_clip1 = sigclip_mask(cbmap,mask_inst_clip.*tmmask,3,5);
+mask_inst_clip(find(mask_inst_clip.*strmask ~= mask_inst_clip1)) = 0;
 
-m_min = 0;
+m_min = 12;
 m_max = 14;
 
 [stamper,hitmap]=stackpsf_2m(flight,inst,ifield,m_min,m_max,dx,...

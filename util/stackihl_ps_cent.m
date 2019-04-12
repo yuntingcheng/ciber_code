@@ -37,22 +37,25 @@ x_arr=squeeze(M(:,4)');
 y_arr=squeeze(M(:,3)');
 x_arr=x_arr+1;
 y_arr=y_arr+1;
-cls_arr=squeeze(M(:,10)');
+
+cls_arr=squeeze(M(:,11)');
+if type == 1
+    type = 3;
+elseif type == -1
+    type =6;
+end
+    
 
 if strcmp(stackband,'y')
     m_arr=squeeze(M(:,9)');
 elseif strcmp(stackband,'Ilin')
-    m_arr=squeeze(M(:,11)');
+    m_arr=squeeze(M(:,14)');
 elseif strcmp(stackband,'Hlin')
-    m_arr=squeeze(M(:,12)');
+    m_arr=squeeze(M(:,15)');
 elseif strcmp(stackband,'I')
-    my_arr = squeeze(M(:,9)');
-    mlin_arr = squeeze(M(:,11)');
-    [m_arr, ~] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+    m_arr=squeeze(M(:,16)');
 elseif strcmp(stackband,'H')
-    my_arr = squeeze(M(:,9)');
-    mlin_arr = squeeze(M(:,12)');
-    [m_arr, ~] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+    m_arr=squeeze(M(:,17)');
 end
 
 
@@ -80,7 +83,8 @@ if type ==0
 end
 
 if type==2
-    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=1 & cls_arr~=-1);
+%     sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=1 & cls_arr~=-1);
+    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=3 & cls_arr~=6);
 end
 
 submtot_arr=m_arr(sp);

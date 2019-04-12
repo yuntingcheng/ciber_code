@@ -16,9 +16,6 @@ for ifield = 4:8
 
 dt=get_dark_times(flight,inst,ifield);
 cbmap = stackmapdat(ifield).cbmap;
-if ifield == 5
-    cbmap = stackmapdat(ifield).cbmap_last10;
-end
 psmap = stackmapdat(ifield).psmap;
 mask_inst = stackmapdat(ifield).mask_inst_clip;
 strmask = stackmapdat(ifield).strmask;
@@ -90,14 +87,16 @@ end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(sprintf('%s/Icorrdat',savedir),'Icorrdat');
-
 %%
 flight = 40030;
-inst =1;
+inst =2;
 mypaths=get_paths(flight);
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 load(sprintf('%s/Icorrdat',savedir),'Icorrdat');
+
+m_min_arr = [0,8:22];
+m_max_arr = [8:23];
 
 figure
 setwinsize(gcf,1000,300)
@@ -130,12 +129,10 @@ for im = 1:numel(m_min_arr)
             corru = [corru, Icorrdat.field(ifield).corru_arr(im)];
         end
 end
-if ifield ~= 5
-    ms_arr = [ms_arr, ms(ms > 14 & ms < 19)];
-    corrs_arr = [corrs_arr, corrs(ms > 14 & ms < 19)];
-    mg_arr = [mg_arr, mg(mg > 16 & mg < 20)];
-    corrg_arr = [corrg_arr, corrg(mg > 16 & mg < 20)];
-end
+ms_arr = [ms_arr, ms(ms > 14 & ms < 19)];
+corrs_arr = [corrs_arr, corrs(ms > 14 & ms < 19)];
+mg_arr = [mg_arr, mg(mg > 16 & mg < 20)];
+corrg_arr = [corrg_arr, corrg(mg > 16 & mg < 20)];
 subplot(1,3,1)
 plot(ms, corrs, '.-', 'color', get_color(ifield-3), ...
     'markersize',15, 'DisplayName', strcat(dt.name) ); hold on

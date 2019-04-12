@@ -89,9 +89,7 @@ for i=1:numel(sp)
     
     % the center pixel is the max among 3x3 stamp
     cbmapi = cbmap.*strmask.*mask_inst;
-    radi = -3.08e4.*exp(-(submtot_arr(i)-10.84).^2./(5.253).^2) + ...
-    3.091e4.*exp(-(submtot_arr(i)-10.83).^2./(5.26).^2); % [arcsec]
-    if radi<7 ; radi=7 ; end    
+    radi = get_mask_radius(inst,ifield,submtot_arr(i));% [arcsec]
     radmap = make_radius_map(cbmapi,subxtot_arr(i),subytot_arr(i));
     sp1 = find (radmap < radi./7 & strnum==1 & mask_inst==1);
     cbmapi(sp1) = cbmap(sp1);
@@ -111,9 +109,7 @@ for i=1:numel(sp)
 end
 
 %%% set up stacking %%%
-rad_arr = -3.08e4.*exp(-(subm_arr-10.84).^2./(5.253).^2) + ...
-    3.091e4.*exp(-(subm_arr-10.83).^2./(5.26).^2); % [arcsec]
-rad_arr(find(rad_arr<7))=7;
+rad_arr = get_mask_radius(inst,ifield,subm_arr);% [arcsec]
 
 stamper = zeros(2*dx+1);
 hitmap = zeros(2*dx+1);
@@ -124,8 +120,7 @@ idx_arr = 1:numel(subm_arr);
 nbins = 25;
 iter_clip = 3;
 sig = 3;
-
-
+%%
 for i=idx_arr
     cbmapi = cbmap.*strmask.*mask_inst;
     %%% unmask the target
@@ -145,7 +140,7 @@ for i=idx_arr
     rmin = 20; % don't clip with in rmin subpixels
     sig_clip_mask = stamp_clip(stamp0,dx+1,dx+1,nbins,sig,iter_clip,rmin);
     stamp = stamp0 .* sig_clip_mask;
-
+        
     %%% stack
     stamper = stamper+stamp;
     hitmap = hitmap+sig_clip_mask;
@@ -156,6 +151,8 @@ for i=idx_arr
     end
 
 end
+
+%%
     disp(sprintf('stack %d(%d total) src between %.1f<m<%.1f '...
         ,count_stack,count_tot,m_min,m_max));
 

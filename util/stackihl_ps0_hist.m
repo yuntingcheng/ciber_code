@@ -1,6 +1,6 @@
-function [stampercb,stamperps,hitmap]=...
-    stackihl_ps0(flight,inst,ifield,type,m_min,m_max,dx,cbmap,psmap,...
-    mask_inst,strmask,strnum,unmask,Nsrc,verbose,isub,Nsub,stackband,idx_stack_arr)
+function [histcb, histps,Ibinedges_cb,Ibinedges_ps,stackcount]=...
+stackihl_ps0_hist(flight,inst,ifield,type,m_min,m_max,dx,cbmap,psmap,...
+mask_inst,strmask,strnum,unmask,Nsrc,verbose,Nsub,stackband,idx_stack_arr,spire)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Stack src based on PanSTARRS catalog
 %
@@ -36,12 +36,7 @@ x_arr=squeeze(M(:,4)');
 y_arr=squeeze(M(:,3)');
 x_arr=x_arr+1;
 y_arr=y_arr+1;
-cls_arr=squeeze(M(:,11)');
-if type == 1
-    type = 3;
-elseif type == -1
-    type =6;
-end
+cls_arr=squeeze(M(:,10)');
 
 if strcmp(stackband,'y')
     m_arr=squeeze(M(:,9)');
@@ -54,7 +49,6 @@ elseif strcmp(stackband,'I')
 elseif strcmp(stackband,'H')
     m_arr=squeeze(M(:,17)');
 end
-
 
 sp=find(x_arr>0.5 & x_arr<1024.5 & y_arr>0.5 & y_arr<1024.5);
 
@@ -80,8 +74,7 @@ if type ==0
 end
 
 if type==2
-%     sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=1 & cls_arr~=-1);
-    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=3 & cls_arr~=6);
+    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=1 & cls_arr~=-1);
 end
 
 submtot_arr=m_arr(sp);
@@ -104,10 +97,6 @@ end
 %%% set up stacking %%%
 rad_arr = get_mask_radius(inst,ifield,subm_arr);
 
-stampercb=zeros(2*dx+1);
-stamperps=zeros(2*dx+1);
-hitmap=zeros(2*dx+1);
-
 idx_arr = 1:numel(subm_arr);
 
 if numel(idx_arr)>20
@@ -121,14 +110,31 @@ if Nsrc ~= 0 & Nsrc < numel(idx_arr)
     idx_arr = datasample(idx_arr,Nsrc,'Replace',false);
 end
 
-if Nsub ~= 0
-    idx_arr = idx_arr(isub:Nsub:floor(numel(idx_arr)/Nsub)*Nsub);
-end
-
 if numel(idx_stack_arr) == 0
     idx_stack_arr = idx_arr;
 end
 
+%%%
+rad = make_radius_map(zeros(2*dx+1),dx+1,dx+1);
+cbmax = max(max(max(cbmap.*strmask.*mask_inst)), 1000);
+cbmin = min(min(cbmap.*strmask.*mask_inst));
+psmax = max(max(max(psmap.*strmask.*mask_inst)), 1000);
+psmin = min(min(psmap.*strmask.*mask_inst));
+Ibinedges_cb =  cbmin:1:cbmax;
+Ibinedges_ps =  psmin:0.01:psmax;
+
+nbins = 25;
+if Nsub == 0
+    histcb = zeros(nbins,numel(Ibinedges_cb)-1);
+    histps = zeros(nbins,numel(Ibinedges_ps)-1);
+else
+    histcb = zeros(Nsub,nbins,numel(Ibinedges_cb)-1);
+    histps = zeros(Nsub,nbins,numel(Ibinedges_ps)-1);
+end    
+profile = radial_prof(rad,ones(2*dx+1),dx+1,dx+1,1,nbins);
+binedges = profile.binedges;
+
+stackcount = numel(idx_stack_arr);
 for i=idx_stack_arr
     cbmapi = cbmap.*strmask.*mask_inst;
     psmapi = psmap.*strmask.*mask_inst;
@@ -151,27 +157,43 @@ for i=idx_stack_arr
     stampcb = stampcb0(xcent-dx:xcent+dx,ycent-dx:ycent+dx);
     stampps = stampps0(xcent-dx:xcent+dx,ycent-dx:ycent+dx);
     maskstamp = zeros(size(stampcb));
-    maskstamp(find(stampcb)) = 1;
-
-    %%% stack
-    if mod(i,4)==0
-        stampercb=stampercb+imrotate(stampcb, 0);
-        stamperps=stamperps+imrotate(stampps, 0);
-        hitmap=hitmap+imrotate(maskstamp, 0);
-    elseif mod(i,4)==1
-        stampercb=stampercb+imrotate(stampcb, 90);
-        stamperps=stamperps+imrotate(stampps, 90);
-        hitmap=hitmap+imrotate(maskstamp, 90);
-    elseif mod(i,4)==2
-        stampercb=stampercb+imrotate(stampcb, 180);
-        stamperps=stamperps+imrotate(stampps, 180);
-        hitmap=hitmap+imrotate(maskstamp, 180);
-    elseif mod(i,4)==3
-        stampercb=stampercb+imrotate(stampcb, 270);
-        stamperps=stamperps+imrotate(stampps, 270);
-        hitmap=hitmap+imrotate(maskstamp, 270);
+    maskstamp(find(stampcb~=0)) = 1;
+    
+    for ibin = 1:nbins
+        sp = find((stampcb~=0) & (rad>=binedges(ibin)) & (rad<binedges(ibin+1)));
+        stampcb_ibin = stampcb(sp);
+        stampps_ibin = stampps(sp);
+        if spire
+            [N,~] = histc(stampcb_ibin,Ibinedges_cb);
+            N = N(1:end-1);  
+        else
+            [N,~] = histcounts(stampcb_ibin,Ibinedges_cb);
+        end
+        
+        if Nsub == 0
+            histcb(ibin,:) = histcb(ibin,:) + reshape(N,[1,numel(Ibinedges_cb)-1]);
+        else
+            histcb(rem(i,Nsub)+1,ibin,:) = histcb(rem(i,Nsub)+1,ibin,:) + ...
+                reshape(N,[1,1,numel(Ibinedges_cb)-1]);
+        end
+        
+        
+        if spire
+            [N,~] = histc(stampps_ibin,Ibinedges_ps);
+            N = N(1:end-1);         
+        else
+            [N,~] = histcounts(stampps_ibin,Ibinedges_ps);
+        end
+        
+        if Nsub == 0
+            histps(ibin,:) = histps(ibin,:) + reshape(N,[1,numel(Ibinedges_ps)-1]);
+        else
+            histps(rem(i,Nsub)+1,ibin,:) = histps(rem(i,Nsub)+1,ibin,:) + ...
+                reshape(N,[1,1,numel(Ibinedges_ps)-1]);
+        end
+        
     end
-
+    
     %%% print
     if ismember(i,idx_print) & verbose>0
         print_count = print_count + 1;
@@ -180,8 +202,6 @@ for i=idx_stack_arr
     end
 end
 %%
-
     disp(sprintf('stack %d src between %.1f<m<%.1f '...
         ,numel(idx_stack_arr),m_min,m_max));
-
 return

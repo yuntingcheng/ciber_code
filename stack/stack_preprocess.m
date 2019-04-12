@@ -15,7 +15,10 @@ for ifield=4:8
 
     dt=get_dark_times(flight,inst,ifield);
     cbmap_raw = stackmapdat(ifield).map * cal(ifield).apf2nWpm2ps;
-
+    if ifield == 5
+        cbmap_raw = stackmapdat(ifield).map_last10 * cal(ifield).apf2nWpm2ps;
+    end
+    
     %%%%% PanSTARRS srcmap %%%%%%%
     srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
         num2str(inst),'/');
@@ -24,6 +27,7 @@ for ifield=4:8
     %%% masks %%%
     mask_inst = stackmapdat(ifield).mask;
     strmask = maskdat.mask(ifield).strmask_stack;
+    %strmask = maskdat.mask(ifield).strmask_stack_same;%%%%%
 %     if ifield== 5 
 %         strmask = maskdat.mask(ifield).strmask_stack_aggressive;
 %     end

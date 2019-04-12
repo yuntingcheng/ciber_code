@@ -31,17 +31,13 @@ cls_arr=squeeze(M(:,10)');
 if band == 'y'
     m_arr=squeeze(M(:,9)');
 elseif band == 'Ilin'
-    m_arr=squeeze(M(:,11)');
+    m_arr=squeeze(M(:,14)');
 elseif band == 'Hlin'
-    m_arr=squeeze(M(:,12)');
+    m_arr=squeeze(M(:,15)');
 elseif band == 'I'
-    my_arr=squeeze(M(:,9)');
-    mlin_arr=squeeze(M(:,11)');
-    [m_arr, ~] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+    m_arr=squeeze(M(:,16)');
 elseif band == 'H'
-    my_arr=squeeze(M(:,9)');
-    mlin_arr=squeeze(M(:,12)');
-    [m_arr, ~] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
+    m_arr=squeeze(M(:,17)');
 end
 
 sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type);

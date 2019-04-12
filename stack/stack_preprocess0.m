@@ -1,7 +1,4 @@
 function stack_preprocess0(flight,inst)
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% get linearized mask for stacking
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 mypaths=get_paths(flight);
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
@@ -9,9 +6,6 @@ load(strcat(loaddir,'maskdat'),'maskdat');
 
 m_min_arr = [0,8:22];
 m_max_arr = [8:23];
-
-m_min_arr_2m = [0,7:21];
-m_max_arr_2m = [7:22];
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst));
 load(sprintf('%s/stackmapdat',savedir),'stackmapdat');
@@ -21,13 +15,15 @@ for ifield=4:8
 
     dt=get_dark_times(flight,inst,ifield);
     cbmap_raw = stackmapdat(ifield).map * cal(ifield).apf2nWpm2ps;
+    if ifield == 5
+        cbmap_raw = stackmapdat(ifield).map_last10 * cal(ifield).apf2nWpm2ps;
+    end
 
     %%%%% PanSTARRS srcmap %%%%%%%
     srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
         num2str(inst),'/');
     psmap_raw = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps_all.fits'));
 
-    
     %%% masks %%%
     mask_inst = stackmapdat(ifield).mask;
     strmask = maskdat.mask(ifield).strmask;
@@ -39,10 +35,6 @@ for ifield=4:8
     sigmask2 = sigclip_mask(sm,sigmask1,3,5);
     sm = fillpadsmooth(psmap_raw,sigmask2,2);
     sigmask = sigclip_mask(sm,sigmask2,3,5);
-    if ifield == 5
-        cbmap_last10_raw = stackmapdat(ifield).map_last10 * cal(ifield).apf2nWpm2ps;
-        sigmask = sigclip_mask(cbmap_last10_raw, sigmask, 3, 5);
-    end
     cbmean = mean(cbmap_raw(find(sigmask)));
     psmean = mean(psmap_raw(find(sigmask)));
     
@@ -51,15 +43,7 @@ for ifield=4:8
     cbmap = cbmap_raw - polymapcb;
     cb_bk = mean(cbmap(find(sigmask)));
     cbmap = cbmap - cb_bk;
-    
-    if ifield == 5
-        p = polyfitweighted2(1:1024,1:1024,cbmap_last10_raw,2,sigmask);
-        polymapcb = polyval2(p,1:1024,1:1024);
-        cbmap_last10 = cbmap_last10_raw - polymapcb;
-        cb_bk = mean(cbmap_last10(find(sigmask)));
-        cbmap_last10 = cbmap_last10 - cb_bk;
-    end
-    
+        
     p = polyfitweighted2(1:1024,1:1024,psmap_raw,2,sigmask);
     polymapps = polyval2(p,1:1024,1:1024);
     psmap = psmap_raw - polymapps;
@@ -74,9 +58,6 @@ for ifield=4:8
     sm = fillpadsmooth(cbmap,mask_inst_clip.*strmask,50);
     %%% write the data %%%
     stackmapdat(ifield).cbmap = cbmap;
-    if ifield == 5
-        stackmapdat(ifield).cbmap_last10 = cbmap_last10;
-    end
     stackmapdat(ifield).psmap = psmap;
     stackmapdat(ifield).mask_inst_clip = mask_inst_clip;
     stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask;

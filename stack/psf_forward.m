@@ -11,9 +11,9 @@ loaddir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/psf_analytic/TM',...
 load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
 psfdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/psf/TM',...
         num2str(inst),'/');
-
-for ifield=8:-1:4
 %%
+for ifield=8:-1:4
+
 dt = get_dark_times(flight,inst,ifield);
 
 %%% get the CIBER stacked PSF map and profile %%%
@@ -32,7 +32,7 @@ C = fitpsfdat(ifield).bestparam(3);
 
 
 mapcb = mapcb - C;
-%%
+
 %%% iterate on beta, C %%%%
 beta_arr = 0.5:0.5:3;
 rc_arr = 1:0.5:6;
@@ -46,7 +46,7 @@ psfmap_best = mapcb;
 
 % src position random in a pixel between [npix+0.5,npix+0.5+10]
 src_coord=dx+0.5+10*rand(2,Nsims);
-%%
+
 for beta = beta_arr
     disp(sprintf('field%d, beta = %.1f',ifield,beta));
 for rc = rc_arr
@@ -99,8 +99,25 @@ psfmodel.prof_best_arr = psim_best_arr;
 fitpsfdat(ifield).psfmodel = psfmodel;
 save(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
 
-%%
-%%% plot the results
+end
+
+%% plot fitting results
+load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
+
+for ifield=8:-1:4
+
+dt = get_dark_times(flight,inst,ifield);
+
+%%% get the CIBER stacked PSF map and profile %%%
+r_arr = fitpsfdat(ifield).r_arr;
+pcb_arr = fitpsfdat(ifield).p_arr;
+ecb_arr = fitpsfdat(ifield).e_arr;
+psim_best_arr = fitpsfdat(ifield).psfmodel.prof_best_arr;
+rc = fitpsfdat(ifield).psfmodel.rc_best;
+beta = fitpsfdat(ifield).psfmodel.beta_best;
+m_best_arr = (1 + (r_arr/rc).^2).^(-3.*beta./2);
+C = fitpsfdat(ifield).bestparam(3);
+
 fig=figure;
 setwinsize(gcf,800,400)
 
