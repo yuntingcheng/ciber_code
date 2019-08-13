@@ -1,9 +1,9 @@
 function [histbkdat]=stackihl_ps_randomN_hist...
-    (N_arr,dx,cbmap,psmap,Ibinedges_cb,Ibinedges_ps,mask,spire)
+    (N_arr,dx,cbmap,psmap,Ibinedges_cb,Ibinedges_ps,mask,Npix,spire)
 
 % randomize the position
-subx_arr=1023*rand(1,max(N_arr))+1;
-suby_arr=1023*rand(1,max(N_arr))+1;
+subx_arr=(Npix-1)*rand(1,max(N_arr))+1;
+suby_arr=(Npix-1)*rand(1,max(N_arr))+1;
 
 nbins = 25;
 histcb = zeros(nbins,numel(Ibinedges_cb)-1);

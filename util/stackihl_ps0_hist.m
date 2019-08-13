@@ -1,6 +1,8 @@
-function [histcb, histps,Ibinedges_cb,Ibinedges_ps,stackcount]=...
+function [histcb, histps,Ibinedges_cb,Ibinedges_ps,stackcount,...
+    subx_arr,suby_arr,subz_arr]=...
 stackihl_ps0_hist(flight,inst,ifield,type,m_min,m_max,dx,cbmap,psmap,...
-mask_inst,strmask,strnum,unmask,Nsrc,verbose,Nsub,stackband,idx_stack_arr,spire)
+mask_inst,strmask,strnum,unmask,Nsrc,verbose,Nsub,stackband,idx_stack_arr,...
+spire,rmin,return_count)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Stack src based on PanSTARRS catalog
 %
@@ -36,7 +38,11 @@ x_arr=squeeze(M(:,4)');
 y_arr=squeeze(M(:,3)');
 x_arr=x_arr+1;
 y_arr=y_arr+1;
-cls_arr=squeeze(M(:,10)');
+% cls_arr=squeeze(M(:,10)');
+cls_arr=squeeze(M(:,11)');
+cls_arr(cls_arr==3)=1;
+cls_arr(cls_arr==6)=-1;
+photz_arr=squeeze(M(:,12)');
 
 if strcmp(stackband,'y')
     m_arr=squeeze(M(:,9)');
@@ -56,6 +62,7 @@ x_arr = x_arr(sp);
 y_arr = y_arr(sp);
 m_arr = m_arr(sp);
 cls_arr = cls_arr(sp);
+photz_arr=photz_arr(sp);
 
 %%% count the center pix map
 xround_arr=round(x_arr);
@@ -68,7 +75,13 @@ for i=1:numel(xround_arr)
 end
 
 %%% select sources %%%
-sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type);
+if type==1
+    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type & photz_arr >= 0);
+else
+    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type);
+end
+
+% sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type);
 if type ==0
     sp=find(m_arr<=m_max & m_arr>m_min);
 end
@@ -80,22 +93,29 @@ end
 submtot_arr=m_arr(sp);
 subxtot_arr=x_arr(sp);
 subytot_arr=y_arr(sp);
+subztot_arr=photz_arr(sp);
 
 %%% select sources not coexist with others in the same pixel %%%
 subm_arr=[];
 subx_arr=[];
 suby_arr=[];
+subz_arr=[];
 for i=1:numel(sp)
     if centnum_map(round(subxtot_arr(i)),round(subytot_arr(i)))==1 ...        
             & mask_inst(round(subxtot_arr(i)),round(subytot_arr(i)))==1
         subm_arr=[subm_arr,submtot_arr(i)];
         subx_arr=[subx_arr,subxtot_arr(i)];
         suby_arr=[suby_arr,subytot_arr(i)];
+        subz_arr=[subz_arr,subztot_arr(i)];
     end
 end
 
 %%% set up stacking %%%
-rad_arr = get_mask_radius(inst,ifield,subm_arr);
+if isnan(rmin)
+    rad_arr = get_mask_radius(inst,ifield,subm_arr);
+else 
+    rad_arr = get_mask_radius(inst,ifield,subm_arr,'rmin',rmin);
+end
 
 idx_arr = 1:numel(subm_arr);
 
@@ -113,8 +133,7 @@ end
 if numel(idx_stack_arr) == 0
     idx_stack_arr = idx_arr;
 end
-
-%%%
+%%
 rad = make_radius_map(zeros(2*dx+1),dx+1,dx+1);
 cbmax = max(max(max(cbmap.*strmask.*mask_inst)), 1000);
 cbmin = min(min(cbmap.*strmask.*mask_inst));
@@ -135,7 +154,14 @@ profile = radial_prof(rad,ones(2*dx+1),dx+1,dx+1,1,nbins);
 binedges = profile.binedges;
 
 stackcount = numel(idx_stack_arr);
+
+if return_count
+    return
+end
+
 for i=idx_stack_arr
+    
+    
     cbmapi = cbmap.*strmask.*mask_inst;
     psmapi = psmap.*strmask.*mask_inst;
     %%% unmask the target

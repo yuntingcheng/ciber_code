@@ -130,6 +130,7 @@ function mypaths=get_paths(flight)
     mypaths.filtmap = '/Volumes/HD1TB/CIBER/data/40030/filtmap/';
     mypaths.alldat = '/Users/ytcheng/ciber/doc/20170325_alldat/';
     mypaths.ciberdir = '/Users/ytcheng/ciber/';
+    mypaths.hsccatdir = '/Volumes/Drive/ciber/data/HSC/fields/';
   end
   
 return

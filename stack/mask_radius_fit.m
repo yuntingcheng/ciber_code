@@ -1,5 +1,5 @@
 flight = 40030;
-inst = 2;
+inst = 1;
 
 for ifield = 4:8
 
@@ -17,7 +17,7 @@ dt=get_dark_times(flight,inst,ifield);
 srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
     num2str(inst),'/');
 
-map = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps1_all.fits'));
+map = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps_all.fits'));
 
 %%% get cats %%%
 catdir=strcat(mypaths.ciberdir, 'doc/20170617_Stacking/maps/catcoord/TM',...
@@ -34,10 +34,10 @@ sr = ((7./3600.0)*(pi/180.0)).^2;
 
     
 if inst==1
-    mps_arr = squeeze(M(:,16)');
+    mps_arr = squeeze(M(:,21)');
 
 else
-    mps_arr = squeeze(M(:,17)');
+    mps_arr = squeeze(M(:,22)');
 
 end
 
@@ -60,7 +60,7 @@ else
     mtm_arr = squeeze(M(:,9)');
 end
 match_arr = squeeze(M(:,11)');
-sp=find(match_arr==1 & ...
+sp=find(match_arr==0 & ...
     x_arr>0.5-30 & x_arr<1024.5+30 & y_arr>0.5-30 & y_arr<1024.5+30);
 mtm_arr = mtm_arr(sp);
 xtm_arr = x_arr(sp);
@@ -75,26 +75,26 @@ mask(map > Ith) = 0;
 %%% find radius
 rtm_arr = zeros(size(mtm_arr));
 for i = 1:numel(mtm_arr)
-radmap=make_radius_map(mask,xtm_arr(i),ytm_arr(i));
-r = 1;
-while all(mask(radmap < r) == 0)
-    r = r + 1;
-end
-rtm_arr(i) = r - 1;
+    radmap=make_radius_map(mask,xtm_arr(i),ytm_arr(i));
+    r = 1;
+    while all(mask(radmap < r) == 0)
+        r = r + 1;
+    end
+    rtm_arr(i) = r - 1;
 end
 
 rps_arr = zeros(size(mps_arr));
 for i = 1:numel(mps_arr)
-radmap=make_radius_map(mask,xps_arr(i),yps_arr(i));
-r = 1;
-while all(mask(radmap < r) == 0)
-    r = r + 1;
-end
-rps_arr(i) = r - 1;
+    radmap=make_radius_map(mask,xps_arr(i),yps_arr(i));
+    r = 1;
+    while all(mask(radmap < r) == 0)
+        r = r + 1;
+    end
+    rps_arr(i) = r - 1;
 
-if rem(i, 1000)==0
-    fprintf('find radius for PS source %d / %d\n',i,numel(mps_arr));
-end
+    if rem(i, 1000)==0
+        fprintf('find radius for PS source %d / %d\n',i,numel(mps_arr));
+    end
 end
 
 %%% 
@@ -171,41 +171,53 @@ for ifield = 4:8
 end
 %% making mask
 flight = 40030;
-inst = 2;
+inst = 1;
 mypaths=get_paths(flight);
 
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+load(strcat(loaddir,'maskdat'),'maskdat');
+
+Ith=0.25;
 for ifield = 4:8
-dt=get_dark_times(flight,inst,ifield);
+fprintf('make mask inst %d, field %d\n',inst,ifield);
 
 if inst == 1
     band = 'I';
 else
     band = 'H';
 end
-[tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,1,13);
-[psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,0,23);
+[tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,0,23,Ith,'PSmatch',1);
+[psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,0,23,Ith);
+
 strmask = psmask.*tmmask;
 strnum = psnum + tmnum;
 
-loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-load(strcat(loaddir,'maskdat'),'maskdat');
 maskdat.mask(ifield).strmask_stack = strmask;
 maskdat.mask(ifield).strnum_stack = strnum;
+
+for m_max=[17,18,19,20]
+    [tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,0,m_max,'PSmatch',1);
+    [psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,0,m_max);
+    strmask = psmask.*tmmask;
+    strnum = psnum + tmnum;
+    maskdat.mask(ifield).m_max(m_max).strmask_stack = strmask;
+    maskdat.mask(ifield).m_max(m_max).strnum_stack = strnum;    
+end
 save(strcat(loaddir,'maskdat'),'maskdat');
 end
-%%
+%% plot
 for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
     num2str(inst),'/');
-map = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps1_all.fits'));
+map = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps_all.fits'));
 
-figure
-strmask1 = maskdat.mask(ifield).strmask;
-imageclip(strmask1.*map);
-title(sprintf('old mask %.1f %% unmasked', numel(find(strmask1))/1024/1024 * 100));
-v = caxis;
+% figure
+% strmask1 = maskdat.mask(ifield).strmask;
+% imageclip(strmask1.*map);
+% title(sprintf('old mask %.1f %% unmasked', numel(find(strmask1))/1024/1024 * 100));
+% v = caxis;
 
 figure
 strmask = maskdat.mask(ifield).strmask_stack;
@@ -218,9 +230,14 @@ strmask = maskdat.mask(ifield).strmask_stack;
 histogram(strmask.*map);
 
 end
-%%
+%% plot example masked map
+flight=40030;
+inst=1;
 ifield = 5;
+mypaths=get_paths(flight);
 dt=get_dark_times(flight,inst,ifield);
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+load(strcat(loaddir,'maskdat'),'maskdat');
 
 srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
     num2str(inst),'/');
@@ -242,3 +259,27 @@ title('elat30 sim map');
 caxis(v);
 c = colorbar;
 c.Label.String = 'nW/m^2/sr';
+%% make mask with rmin=2
+flight = 40030;
+inst = 2;
+mypaths=get_paths(flight);
+
+for ifield =4:8
+dt=get_dark_times(flight,inst,ifield);
+
+if inst == 1
+    band = 'I';
+else
+    band = 'H';
+end
+[tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,1,13,'rmin',2);
+[psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,0,23,'rmin',2);
+strmask = psmask.*tmmask;
+strnum = psnum + tmnum;
+
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+load(strcat(loaddir,'maskdat'),'maskdat');
+maskdat.mask(ifield).strmask_stack_rmin2 = strmask;
+maskdat.mask(ifield).strnum_stack_rmin2 = strnum;
+save(strcat(loaddir,'maskdat'),'maskdat');
+end

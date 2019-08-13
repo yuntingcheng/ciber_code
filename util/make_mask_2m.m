@@ -1,4 +1,4 @@
-function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max)
+function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max,Ith,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Produce the mask from 2MASS
 %Use mag extrapolated to PanSTARRS y band 
@@ -12,6 +12,32 @@ function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max)
 % - m_min: min masking magnitude (PS y band extrapolated)
 % - m_max: max masking magnitude (PS y band extrapolated)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  p = inputParser;
+  
+  p.addRequired('flight',@isnumeric);
+  p.addRequired('inst',@isnumeric);
+  p.addRequired('band',@ischar);
+  p.addRequired('ifield',@isnumeric);
+  p.addRequired('m_min',@isnumeric);
+  p.addRequired('m_max',@isnumeric);
+  p.addRequired('Ith',@isnumeric);
+  p.addOptional('rmin',nan,@isnumeric);
+  p.addOptional('PSmatch',nan,@isnumeric);
+  p.addOptional('verbose',true,@islogical);
+  p.parse(flight,inst,band,ifield,m_min,m_max,Ith,varargin{:});
+
+  flight   = p.Results.flight;
+  inst     = p.Results.inst;
+  band     = p.Results.band;
+  ifield   = p.Results.ifield;
+  m_min    = p.Results.m_min;
+  m_max    = p.Results.m_max;
+  Ith      = p.Results.Ith;
+  rmin     = p.Results.rmin;
+  PSmatch  = p.Results.PSmatch;
+  verbose  = p.Results.verbose;
+  clear p varargin;
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 catdir=strcat('/Users/ytcheng/ciber/doc/20170617_Stacking/maps/catcoord/TM',...
     num2str(inst),'/PSC/');
@@ -34,13 +60,21 @@ idxObj = containers.Map(keySet,idxSet);
 
 m_arr=squeeze(M(:,idxObj(band))');
 
-sp=find(m_arr<=m_max & m_arr>m_min);
-
+if PSmatch~=0
+    match_arr = squeeze(M(:,11)');
+    sp=find(m_arr<=m_max & m_arr>m_min & match_arr==0);
+else
+    sp=find(m_arr<=m_max & m_arr>m_min);
+end
 subm_arr=m_arr(sp);
 subx_arr=x_arr(sp);
 suby_arr=y_arr(sp);
 
-rad_arr = get_mask_radius(inst,ifield,subm_arr);
+if isnan(rmin)
+    rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith);
+else
+    rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith,'rmin',rmin);
+end
 
 mask = ones(1024);
 num = zeros(1024);
@@ -58,9 +92,11 @@ for i=1:numel(subm_arr)
     mask(sp1)=0;
     num(sp1) = num(sp1) + 1;
     
-    if ismember(i,idx_print)
-        print_count = print_count + 1;
-        disp(sprintf('making mask for %d %% sources',print_count));
+    if verbose
+        if ismember(i,idx_print)
+            print_count = print_count + 1;
+            disp(sprintf('making mask for %d %% sources',print_count));
+        end
     end
 
 end

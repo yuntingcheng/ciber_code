@@ -1,4 +1,4 @@
-function stack_preprocess_sim(flight,inst)
+function stack_preprocess_sim(flight,inst,f_ihl,rvir)
 
 mypaths=get_paths(flight);
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
@@ -25,18 +25,24 @@ for ifield=4:8
     map2 = fits_read(strcat(srcmapdir,dt.name,'_srcmap_sim2_all.fits'));
     map3 = fits_read(strcat(srcmapdir,dt.name,'_srcmap_sim3_all.fits'));
     
+    ihlmap1 = fits_read(strcat(srcmapdir,...
+        'unisphere_ihlmap_sim1_all',num2str(rvir),'.fits'));
+    ihlmap2 = fits_read(strcat(srcmapdir,...
+        'unisphere_ihlmap_sim2_all',num2str(rvir),'.fits'));
+
     psmap_raw = map1;
 
     %%%%%%%%%%%%%%%%%%%% all sources %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    cbmap_raw = map1 + map2 + map3 + normrnd(0, sign, size(map1));
-    
+    cbmap_raw = map1 + map2 + map3 + ihlmap1.*f_ihl + ihlmap2.*f_ihl;
     %%% sigma clip and mean/grad sub %%%
-    sigmask1 = sigclip_mask(cbmap_raw,totmask,3,5);
-    sigmask1 = sigclip_mask(psmap_raw,sigmask1,3,5);
-    sm = fillpadsmooth(cbmap_raw,sigmask1,2);
-    sigmask2 = sigclip_mask(sm,sigmask1,3,5);
-    sm = fillpadsmooth(psmap_raw,sigmask2,2);
-    sigmask = sigclip_mask(sm,sigmask2,3,5);
+%     Q1 = quantile(cbmap_raw(find(totmask)),0.25);
+%     Q3 = quantile(cbmap_raw(find(totmask)),0.75);
+%     IQR = Q3-Q1;
+%     clipmin = Q1 - 30*IQR;
+%     clipmax = Q3 + 30*IQR;
+%     sigmask = totmask;
+%     sigmask((cbmap_raw>clipmax) | (cbmap_raw<clipmin)) = 0;
+    sigmask = totmask;
     
     cbmean = mean(cbmap_raw(find(sigmask)));
     psmean = mean(psmap_raw(find(sigmask)));
@@ -68,15 +74,17 @@ for ifield=4:8
     stackmapdatsim(ifield).all.sign = sign;
 
     %%%%%%%%%%%%%%%%%%%% partial sources %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    cbmap_raw = map1 + map2 + normrnd(0, sign, size(map1));
+    cbmap_raw = map1 + map2 + ihlmap1.*f_ihl + ihlmap2.*f_ihl;
     
     %%% sigma clip and mean/grad sub %%%
-    sigmask1 = sigclip_mask(cbmap_raw,totmask,3,5);
-    sigmask1 = sigclip_mask(psmap_raw,sigmask1,3,5);
-    sm = fillpadsmooth(cbmap_raw,sigmask1,2);
-    sigmask2 = sigclip_mask(sm,sigmask1,3,5);
-    sm = fillpadsmooth(psmap_raw,sigmask2,2);
-    sigmask = sigclip_mask(sm,sigmask2,3,5);
+%     Q1 = quantile(cbmap_raw(find(totmask)),0.25);
+%     Q3 = quantile(cbmap_raw(find(totmask)),0.75);
+%     IQR = Q3-Q1;
+%     clipmin = Q1 - 30*IQR;
+%     clipmax = Q3 + 30*IQR;
+%     sigmask = totmask;
+%     sigmask((cbmap_raw>clipmax) | (cbmap_raw<clipmin)) = 0;
+    sigmask = totmask;
     
     cbmean = mean(cbmap_raw(find(sigmask)));
     psmean = mean(psmap_raw(find(sigmask)));
@@ -111,6 +119,9 @@ for ifield=4:8
 end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-save(sprintf('%s/stackmapdatsim',savedir),'stackmapdatsim');
-
+if rvir==1
+save(sprintf('%s/stackmapdatsim%d',savedir,f_ihl*100),'stackmapdatsim');
+else
+save(sprintf('%s/stackmapdatsim%d_rv%d',savedir,f_ihl*100,rvir),'stackmapdatsim');
+end
 return

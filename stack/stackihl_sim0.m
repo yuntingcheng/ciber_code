@@ -32,9 +32,9 @@ xg_arr=x_arr+1;
 yg_arr=y_arr+1;
 
 if inst==1
-    mg_arr = squeeze(M(:,5)');
-elseif inst==2
     mg_arr = squeeze(M(:,6)');
+elseif inst==2
+    mg_arr = squeeze(M(:,7)');
 end
 
 catdir=strcat(mypaths.ciberdir, 'doc/20170617_Stacking/maps/trilegal/');

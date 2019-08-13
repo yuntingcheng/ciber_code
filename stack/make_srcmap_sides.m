@@ -33,11 +33,11 @@ y_arr=y_arr+1;
 sr = ((7./3600.0)*(pi/180.0)).^2;
 % use linear interpolated magnitude
 if inst==1
-    m_arr = squeeze(M(:,5)');
+    m_arr = squeeze(M(:,6)');
     lambdaeff=1.05;
     I_arr=3631*10.^(-m_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
 else
-    m_arr = squeeze(M(:,6)');
+    m_arr = squeeze(M(:,7)');
     lambdaeff=1.79;
     I_arr=3631*10.^(-m_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
 end

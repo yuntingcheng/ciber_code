@@ -22,21 +22,12 @@ for ifield=ifield_arr
         mapg = make_srcmap_ps(flight,inst,ifield,1,m_min,m_max,interp);
         mapu = make_srcmap_ps(flight,inst,ifield,2,m_min,m_max,interp);
 
-        if interp == 1
-            fits_write(strcat(savedir,dt.name,'_srcmaps',...
-                num2str(m_min),'_',num2str(m_max),'ps'),maps);     
-            fits_write(strcat(savedir,dt.name,'_srcmapg',...
-                num2str(m_min),'_',num2str(m_max),'ps'),mapg);
-            fits_write(strcat(savedir,dt.name,'_srcmapu',...
-                num2str(m_min),'_',num2str(m_max),'ps'),mapu);
-        elseif interp == 2
-            fits_write(strcat(savedir,dt.name,'_srcmaps',...
-                num2str(m_min),'_',num2str(m_max),'ps1'),maps);     
-            fits_write(strcat(savedir,dt.name,'_srcmapg',...
-                num2str(m_min),'_',num2str(m_max),'ps1'),mapg);
-            fits_write(strcat(savedir,dt.name,'_srcmapu',...
-                num2str(m_min),'_',num2str(m_max),'ps1'),mapu);
-        end
+        fits_write(strcat(savedir,dt.name,'_srcmaps',...
+            num2str(m_min),'_',num2str(m_max),'ps'),maps);     
+        fits_write(strcat(savedir,dt.name,'_srcmapg',...
+            num2str(m_min),'_',num2str(m_max),'ps'),mapg);
+        fits_write(strcat(savedir,dt.name,'_srcmapu',...
+            num2str(m_min),'_',num2str(m_max),'ps'),mapu);
     end
 end
 %%
@@ -53,13 +44,8 @@ for ifield=ifield_arr
         dt=get_dark_times(flight,inst,ifield);
         map = make_srcmap_2m(flight,inst,ifield,m_min,m_max,interp,PSmatch);
         
-        if interp == 1
-            fits_write(strcat(savedir,dt.name,'_srcmap',...
-                num2str(m_min),'_',num2str(m_max),'tm'),map);
-        elseif interp == 2
-            fits_write(strcat(savedir,dt.name,'_srcmap',...
-                num2str(m_min),'_',num2str(m_max),'tm1'),map);
-        end
+        fits_write(strcat(savedir,dt.name,'_srcmap',...
+            num2str(m_min),'_',num2str(m_max),'tm'),map);
     end
 end
 
@@ -75,13 +61,8 @@ for ifield=ifield_arr
     
         dt=get_dark_times(flight,inst,ifield);
         map = make_srcmap_2m(flight,inst,ifield,m_min,m_max,interp,PSmatch);
-        if interp == 1
-            fits_write(strcat(savedir,dt.name,'_srcmap',...
-                num2str(m_min),'_',num2str(m_max),'tm_PSsup'),map);
-        elseif interp == 2
-            fits_write(strcat(savedir,dt.name,'_srcmap',...
-                num2str(m_min),'_',num2str(m_max),'tm_PSsup1'),map);
-        end
+        fits_write(strcat(savedir,dt.name,'_srcmap',...
+            num2str(m_min),'_',num2str(m_max),'tm_PSsup'),map);
 
     end
 end

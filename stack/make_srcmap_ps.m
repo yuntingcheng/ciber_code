@@ -33,7 +33,9 @@ x_arr=x_arr+1;
 y_arr=y_arr+1;
 
 my_arr=squeeze(M(:,9)');
-cls_arr=squeeze(M(:,10)');
+cls_arr=squeeze(M(:,11)');
+cls_arr(cls_arr==3)=1;
+cls_arr(cls_arr==6)=-1;
 
 sr = ((7./3600.0)*(pi/180.0)).^2;
 
@@ -58,30 +60,19 @@ if interp == 1
     m_arr = my_arr;
 end
 
-% use corrected magnitude
+% use combined magnitude
 if interp == 2
     if inst==1
-        mcb_arr = squeeze(M(:,16)');
+        mcb_arr = squeeze(M(:,21)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,17)');
+        mcb_arr = squeeze(M(:,22)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
     m_arr = mcb_arr;
 end
-
-% if interp ==2
-%     
-%     if inst==1
-%         mlin_arr = squeeze(M(:,11)');
-%     else
-%         mlin_arr = squeeze(M(:,12)');
-%     end
-% [m_arr, I_arr] = get_corrected_mag(inst, mlin_arr, my_arr, cls_arr);
-% end
-%
 
 %%% select cat data %%%
 sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type ...

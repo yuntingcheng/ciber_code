@@ -7,7 +7,7 @@ function N = IGLcounts_helgason(band,mag)
 % band: 1(2) use 1.25(1.63) data in the paper
 % mag: interpolate to the given magnitude (AB)
 %
-% N: N/mag/
+% N: N/mag/deg^2
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 datadir = '/Users/ytcheng/ciber/doc/20170904_External/helgason/';

@@ -245,7 +245,7 @@ for im=1:3
     ihlprofdat.excess(mc).diff_err = diff_err;
 end
 
-loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
-save(sprintf('%s/%s_ihlprofdat',loaddir,dt.name),'ihlprofdat');
+% loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
+% save(sprintf('%s/%s_ihlprofdat',loaddir,dt.name),'ihlprofdat');
 
 return
