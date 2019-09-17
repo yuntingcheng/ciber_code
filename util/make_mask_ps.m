@@ -1,4 +1,4 @@
-function [mask,num]=make_mask_ps(flight,inst,band,ifield,type,m_min,m_max,Ith,varargin)
+function [mask,num]=make_mask_ps(flight,inst,ifield,type,m_min,m_max,Ith,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Produce the mask from PanSTARR
 %
@@ -15,7 +15,6 @@ function [mask,num]=make_mask_ps(flight,inst,band,ifield,type,m_min,m_max,Ith,va
   
   p.addRequired('flight',@isnumeric);
   p.addRequired('inst',@isnumeric);
-  p.addRequired('band',@ischar);
   p.addRequired('ifield',@isnumeric);
   p.addRequired('type',@isnumeric);
   p.addRequired('m_min',@isnumeric);
@@ -23,11 +22,10 @@ function [mask,num]=make_mask_ps(flight,inst,band,ifield,type,m_min,m_max,Ith,va
   p.addRequired('Ith',@isnumeric);
   p.addOptional('rmin',nan,@isnumeric);
   p.addOptional('verbose',true,@islogical);
-  p.parse(flight,inst,band,ifield,type,m_min,m_max,Ith,varargin{:});
+  p.parse(flight,inst,ifield,type,m_min,m_max,Ith,varargin{:});
 
   flight   = p.Results.flight;
   inst     = p.Results.inst;
-  band     = p.Results.band;
   ifield   = p.Results.ifield;
   type     = p.Results.type;
   m_min    = p.Results.m_min;
@@ -37,45 +35,56 @@ function [mask,num]=make_mask_ps(flight,inst,band,ifield,type,m_min,m_max,Ith,va
   verbose  = p.Results.verbose;
   clear p varargin;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  
-catdir=strcat('/Users/ytcheng/ciber/doc/20170617_Stacking/maps/catcoord/TM',...
-    num2str(inst),'/PanSTARRS/');
+mypaths=get_paths(flight);
+catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/PanSTARRS/');
 
 dt=get_dark_times(flight,inst,ifield);
 %%% read cat data %%%
-catfile=strcat(catdir,dt.name,'.txt');
+catfile=strcat(catdir,dt.name,'.csv');
 
 M = csvread(catfile,1);
 
-x_arr=squeeze(M(:,4)');
-y_arr=squeeze(M(:,3)');
+if inst==1
+    x_arr=squeeze(M(:,4)');
+    y_arr=squeeze(M(:,3)');
+else
+    x_arr=squeeze(M(:,6)');
+    y_arr=squeeze(M(:,5)');
+end
 x_arr=x_arr+1;
 y_arr=y_arr+1;
 
-cls_arr=squeeze(M(:,11)');
+cls_arr=squeeze(M(:,13)');
 cls_arr(cls_arr==3)=1;
 cls_arr(cls_arr==6)=-1;
 
-if band == 'y'
-    m_arr=squeeze(M(:,9)');
-elseif band == 'Ilin'
-    m_arr=squeeze(M(:,14)');
-elseif band == 'Hlin'
-    m_arr=squeeze(M(:,15)');
-elseif band == 'I'
-    m_arr=squeeze(M(:,21)');
-elseif band == 'H'
-    m_arr=squeeze(M(:,22)');
-end
+% if band == 'y'
+%     m_arr=squeeze(M(:,9)');
+% elseif band == 'Ilin'
+%     m_arr=squeeze(M(:,14)');
+% elseif band == 'Hlin'
+%     m_arr=squeeze(M(:,15)');
+% elseif band == 'I'
+%     m_arr=squeeze(M(:,21)');
+% elseif band == 'H'
+%     m_arr=squeeze(M(:,22)');
+% end
 
-sp=find(m_arr<=m_max & m_arr>m_min & cls_arr==type);
+if inst==1
+    m_arr=squeeze(M(:,23)');
+else
+    m_arr=squeeze(M(:,24)');
+end
+mI_arr = squeeze(M(:,23)');
+
+sp=find(mI_arr<=m_max & mI_arr>m_min & cls_arr==type);
 
 if type == 0
-    sp=find(m_arr<=m_max & m_arr>m_min);
+    sp=find(mI_arr<=m_max & mI_arr>m_min);
 end
 
 if type == 2
-    sp=find(m_arr<=m_max & m_arr>m_min & cls_arr~=1 & cls_arr~=-1);
+    sp=find(mI_arr<=m_max & mI_arr>m_min & cls_arr~=1 & cls_arr~=-1);
 end
 
 subm_arr=m_arr(sp);

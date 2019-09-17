@@ -40,37 +40,30 @@ for ifield = 4:8
         excess(ifield).mag(im).m_max = stackdat.m_max;
         excess(ifield).count(im).counts = stackdat.all.counts;
         excess(ifield).count(im).countg = stackdat.all.countg;
-        excess(ifield).ihl(im).ihl = stackdat.excess.diff;
-        excess(ifield).ihl(im).errd = stackdat.excess.diff_err;
-        excess(ifield).ihl(im).ihl100 = stackdat.excess.diff100;
-        excess(ifield).ihl(im).errd100 = stackdat.excess.diff_err100;
-        excess(ifield).cb(im).ihl = stackdat.excess.diffcb;
-        excess(ifield).cb(im).errd = stackdat.excess.diffcb_err;
-        excess(ifield).cb(im).ihl100 = stackdat.excess.diffcb100;
-        excess(ifield).cb(im).errd100 = stackdat.excess.diffcb_err100;
-        excess(ifield).ps(im).ihl = stackdat.excess.diffps;
-        excess(ifield).ps(im).err = stackdat.excess.diffps_err;
+        excess(ifield).cb(im).ihl = stackdat.excess.diffcbpsf;
+        excess(ifield).cb(im).err = stackdat.excess.diffcbpsf_err;
+        excess(ifield).cb(im).ihl100 = stackdat.excess.diffcbpsf100;
+        excess(ifield).cb(im).err100 = stackdat.excess.diffcbpsf_err100;
+        excess(ifield).ps(im).ihl = stackdat.excess.diffpspsf;
+        excess(ifield).ps(im).err = stackdat.excess.diffpspsf_err;
 
-        profsrc = stackdatall(2).stackdat.norm.profcbs;
-        profsrc_err = stackdatall(2).stackdat.norm.profcbs_err;
+        % src profile
+        profsrc = stackdatall(2).stackdat.psfcb;
+        profsrc_err = stackdatall(2).stackdat.psfcb_err;
         norm = stackdat.norm.profcbg(1)/profsrc(1);
         excess(ifield).cb(im).src = profsrc.*norm;
         excess(ifield).cb(im).src_err = profsrc_err.*norm;
-        profsrc = stackdatall(2).stackdat.norm.profpss;
-        profsrc_err = stackdatall(2).stackdat.norm.profpss_err;
-        norm = stackdat.norm.profpsg(1)/profsrc(1);
-        excess(ifield).ps(im).src = profsrc.*norm;
-        excess(ifield).ps(im).src_err = profsrc_err.*norm;
         
+        % fluc error
         errfluc = [];
         errfluc100 = [];
         for iter=1:50
             try
                 if masklim
-                    load(sprintf('%s/stackdatfluc_%s_masklim_iter%d',...
+                    load(sprintf('%s/fluc/stackdatfluc_%s_masklim_iter%d',...
                             loaddir,dt.name,iter),'stackdatfluc');        
                 else
-                    load(sprintf('%s/stackdatfluc_%s_iter%d',...
+                    load(sprintf('%s/fluc/stackdatfluc_%s_iter%d',...
                             loaddir,dt.name,iter),'stackdatfluc');
                 end
                 errfluc = [errfluc;...
@@ -82,76 +75,47 @@ for ifield = 4:8
             end
         end
         
-        if numel(errfluc)==0
-            excess(ifield).ihl(im).errf = 0;
+        if numel(errfluc100)<=1
             excess(ifield).cb(im).errf = 0;
         else
-            excess(ifield).ihl(im).errf = nanstd(errfluc);
             excess(ifield).cb(im).errf = nanstd(errfluc);
         end
         
-        if numel(errfluc100)==0
-            excess(ifield).ihl(im).errf100 = 0;
+        if numel(errfluc100)<=1
             excess(ifield).cb(im).errf100 = 0;
         else
-            excess(ifield).ihl(im).errf100 = nanstd(errfluc100);
             excess(ifield).cb(im).errf100 = nanstd(errfluc100);
         end
-        excess(ifield).cb(im).err = sqrt(excess(ifield).cb(im).errd.^2 + ...
+        excess(ifield).cb(im).errdf = sqrt(excess(ifield).cb(im).err.^2 + ...
             excess(ifield).cb(im).errf.^2);
-        excess(ifield).cb(im).err100 = sqrt(excess(ifield).cb(im).errd100.^2 + ...
+        excess(ifield).cb(im).errdf100 = sqrt(excess(ifield).cb(im).err100.^2 + ...
             excess(ifield).cb(im).errf100.^2);        
-        excess(ifield).ihl(im).err = sqrt(excess(ifield).ihl(im).errd.^2 + ...
-            excess(ifield).ihl(im).errf.^2);
-        excess(ifield).ihl(im).err100 = sqrt(excess(ifield).ihl(im).errd100.^2 + ...
-            excess(ifield).ihl(im).errf100.^2);
-        
-        fprintf('%s %d<m<%d masklim=%d, %d fluc sim\n',...
-            dt.name,stackdat.m_min,stackdat.m_max,true,numel(errfluc100));
     end
 end
 
 % field avg %
 r_arr = stackdat.r_arr;
 for im=1:4
-ihldat = zeros([5,numel(r_arr)]);
-errdat = zeros([5,numel(r_arr)]);
 ihlcbdat = zeros([5,numel(r_arr)]);
 errcbdat = zeros([5,numel(r_arr)]);
 ihlpsdat = zeros([5,numel(r_arr)]);
 errpsdat = zeros([5,numel(r_arr)]);
-
 srccbdat = zeros([5,numel(r_arr)]);
 srccbdat_err = zeros([5,numel(r_arr)]);
-srcpsdat = zeros([5,numel(r_arr)]);
-srcpsdat_err = zeros([5,numel(r_arr)]);
 
-ihldat100 = zeros([5,1]);
-errdat100 = zeros([5,1]);
 cbihldat100 = zeros([5,1]);
 cberrdat100 = zeros([5,1]);
 for ifield = 4:8
-    ihldat(ifield-3,:) = excess(ifield).ihl(im).ihl;
-    errdat(ifield-3,:) =  excess(ifield).ihl(im).err;
     ihlcbdat(ifield-3,:) = excess(ifield).cb(im).ihl;
     errcbdat(ifield-3,:) = excess(ifield).cb(im).err;
     ihlpsdat(ifield-3,:) = excess(ifield).ps(im).ihl;
     errpsdat(ifield-3,:) = excess(ifield).ps(im).err;
     srccbdat(ifield-3,:) = excess(ifield).cb(im).src;
     srccbdat_err(ifield-3,:) = excess(ifield).cb(im).src_err;
-    srcpsdat(ifield-3,:) = excess(ifield).ps(im).src;
-    srcpsdat_err(ifield-3,:) = excess(ifield).ps(im).src_err;
-    
-    ihldat100(ifield-3,:) = excess(ifield).ihl(im).ihl100;
-    errdat100(ifield-3,:) = excess(ifield).ihl(im).err100;
     cbihldat100(ifield-3,:) = excess(ifield).cb(im).ihl100;
     cberrdat100(ifield-3,:) = excess(ifield).cb(im).err100;
 
 end
-ihltot = sum(ihldat./errdat.^2)./sum(1./errdat.^2);
-ihltot_err = sqrt(1./(sum(1./errdat.^2)));
-excess(1).ihl(im).ihl = ihltot;
-excess(1).ihl(im).err = ihltot_err;
 ihltotcb = sum(ihlcbdat./errcbdat.^2)./sum(1./errcbdat.^2);
 ihltotcb_err = sqrt(1./(sum(1./errcbdat.^2)));
 excess(1).cb(im).ihl = ihltotcb;
@@ -165,13 +129,7 @@ srctotcb = sum(srccbdat./srccbdat_err.^2)./sum(1./srccbdat_err.^2);
 srctotcb_err = sqrt(1./(sum(1./srccbdat_err.^2)));
 excess(1).cb(im).src = srctotcb;
 excess(1).cb(im).src_err = srctotcb_err;
-srctotps = sum(srcpsdat./srcpsdat_err.^2)./sum(1./srcpsdat_err.^2);
-srctotps_err = sqrt(1./(sum(1./srcpsdat_err.^2)));
-excess(1).ps(im).src = srctotps;
-excess(1).ps(im).src_err = srctotps_err;
 
-excess(1).ihl(im).ihl100 = sum(ihldat100./errdat100.^2)./sum(1./errdat100.^2);
-excess(1).ihl(im).err100 = sqrt(1./sum(1./errdat100.^2));
 excess(1).cb(im).ihl100 = sum(cbihldat100./cberrdat100.^2)./sum(1./cberrdat100.^2);
 excess(1).cb(im).err100 = sqrt(1./sum(1./cberrdat100.^2));
 
@@ -188,14 +146,14 @@ for im=1:4
         [name,~] = HSC_fields_info(hsc_idx);
         loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
         if masklim
-            load(sprintf('%s/stackdathsc_%s_masklim',...
+            load(sprintf('%s/hsc/stackdathsc_%s_masklim',...
                 loaddir,name),'stackdathsc');  
-            load(sprintf('%s/stackdathsc_%s_masklim_bk',...
+            load(sprintf('%s/hsc/stackdathsc_%s_masklim_bk',...
                 loaddir,name),'stackdathscbk');  
         else
-            load(sprintf('%s/stackdathsc_%s',...
+            load(sprintf('%s/hsc/stackdathsc_%s',...
                 loaddir,name),'stackdathsc');
-            load(sprintf('%s/stackdathsc_%s_bk',...
+            load(sprintf('%s/hsc/stackdathsc_%s_bk',...
                 loaddir,name),'stackdathscbk');
         end
         
@@ -266,26 +224,33 @@ for im=1:4
     countg = stackdat.all.countg;
     r_arr = stackdat.r_arr;
 
-    profscb = stackdat.all.profcbs;
-    profscb_err = stackdat.errjack.profcbs;
-    profsps = stackdat.all.profpss;
-    profsps_err = stackdat.errjack.profpss;
-    profgcb = stackdat.all.profcbg;
+    % profscb = stackdat.all.profcbs - cbbk;
+    % profscb_err = stackdat.errjack.profcbs;
+    % profsps = stackdat.all.profpss - psbk;
+    % profsps_err = stackdat.errjack.profpss;
+    profscb = stackdat.norm.profcbpsf;
+    profscb_err = stackdat.norm.profcbpsf_err;
+    profsps = stackdat.norm.profpspsf;
+    profsps_err = stackdat.norm.profcbpsf_err;
+    
+    cbmean = mean(stackdat.bk.profcbg(r_arr > 100));
+    psmean = mean(stackdat.bk.profpsg(r_arr > 100));
+    profgcb = stackdat.all.profcbg - cbmean;
     profgcb_err = stackdat.errjack.profcbg;
-    profgps = stackdat.all.profpsg;
+    profgps = stackdat.all.profpsg - psmean;
     profgps_err = stackdat.errjack.profpsg;
 
-    profscbbk = stackdat.bk.profcbs;
-    profscb_errbk = stackdat.bk.profcbs_err;
-    profspsbk = stackdat.bk.profpss;
-    profsps_errbk = stackdat.bk.profpss_err;
+    profgcbbk = stackdat.bk.profcbg - cbmean;
+    profgcb_errbk = stackdat.bk.profcbg_err;
+    profgpsbk = stackdat.bk.profpsg - psmean;
+    profgps_errbk = stackdat.bk.profpsg_err;
 
     subplot(3,4,im)
     semilogx(r_arr.*0.98,profscb,'r','markersize',10);hold on
     plot(r_arr.*1.02,profgcb,'b','markersize',10);
     plot(r_arr.*0.98,profsps,'m','markersize',10);
     plot(r_arr.*1.02,profgps,'c','markersize',10);
-    h=legend({'CIBER stars','CIBER galaxies',...
+    h=legend({'CIBER PSF','CIBER galaxies',...
         'PanSTARRS stars','PanSTARRS galaxies'},'Location','southwest');
     set(h,'fontsize',7)
     legend boxoff
@@ -303,19 +268,19 @@ for im=1:4
     subplot(3,4,im + 4)
     semilogx(r_arr.*0.98,profscb,'r','markersize',10);hold on
     plot(r_arr.*1.02,profgcb,'b','markersize',10);
-    plot(r_arr,profscbbk,'k','markersize',10);
-    h=legend({'CIBER stars','CIBER galaxies','background (stars)'},...
+    plot(r_arr,profgcbbk,'k','markersize',10);
+    h=legend({'CIBER PSF','CIBER galaxies','background (gals)'},...
         'Location','northeast');
     set(h,'fontsize',7)
     legend boxoff
     errorbar(r_arr.*0.98,profscb,profscb_err,'r.','markersize',10);
     errorbar(r_arr.*1.02,profgcb,profgcb_err,'b.','markersize',10);
-    errorbar(r_arr,profscbbk,profscb_errbk,'k.','markersize',10);
+    errorbar(r_arr,profgcbbk,profgcb_errbk,'k.','markersize',10);
     xlim([4e-1,1.1e3])
     ylim([-5,10])
     if masklim
-        ylim([profscbbk(end)-40*profscb_errbk(end),...
-            profscbbk(end)+100*profscb_errbk(end)])
+        ylim([profgcbbk(end)-40*profgcb_errbk(end),...
+            profgcbbk(end)+100*profgcb_errbk(end)])
     end
     xlabel('r [arcsec]', 'fontsize',15)
     ylabel('I [nW/m^2/sr]', 'fontsize',15)
@@ -323,19 +288,19 @@ for im=1:4
     subplot(3,4,im + 8)
     semilogx(r_arr.*0.98,profsps,'r','markersize',10);hold on
     plot(r_arr.*1.02,profgps,'b','markersize',10);
-    plot(r_arr,profspsbk,'k','markersize',10);
-    h=legend({'PanSTARRS stars','PanSTARRS galaxies','background (stars)'},...
+    plot(r_arr,profgpsbk,'k','markersize',10);
+    h=legend({'PanSTARRS stars','PanSTARRS galaxies','background (gals)'},...
         'Location','northeast');
     set(h,'fontsize',7)
     legend boxoff
     errorbar(r_arr.*0.98,profsps,profsps_err,'r.','markersize',10);
     errorbar(r_arr.*1.02,profgps,profgps_err,'b.','markersize',10);
-    errorbar(r_arr,profspsbk,profsps_errbk,'k.','markersize',10);
+    errorbar(r_arr,profgpsbk,profgps_errbk,'k.','markersize',10);
     xlim([4e-1,1.1e3])
     ylim([-0.01,0.04])
     if masklim
-        ylim([profspsbk(end)-40*profsps_errbk(end),...
-            profspsbk(end)+100*profsps_errbk(end)])
+        ylim([profgpsbk(end)-40*profgps_errbk(end),...
+            profgpsbk(end)+100*profgps_errbk(end)])
     end
     xlabel('r [arcsec]', 'fontsize',15)
     ylabel('I [nW/m^2/sr]', 'fontsize',15)
@@ -387,17 +352,17 @@ for im=1:4
         stackdat = stackdatall(im).stackdat;
         
         profscb = profscb + ...
-            stackdat.norm.profcbs./(stackdat.norm.profcbs_err.^2);
+            stackdat.norm.profcbpsf./(stackdat.norm.profcbpsf_err.^2);
         profscb_err = profscb_err + ...
-            1./(stackdat.norm.profcbs_err.^2);
+            1./(stackdat.norm.profcbpsf_err.^2);
         profgcb = profgcb + ...
             stackdat.norm.profcbg./(stackdat.norm.profcbg_err.^2);
         profgcb_err = profgcb_err + ...
             1./(stackdat.norm.profcbg_err.^2);
         profsps = profsps + ...
-            stackdat.norm.profpss./(stackdat.norm.profpss_err.^2);
+            stackdat.norm.profpspsf./(stackdat.norm.profpspsf_err.^2);
         profsps_err = profsps_err + ...
-            1./(stackdat.norm.profpss_err.^2);
+            1./(stackdat.norm.profpspsf_err.^2);
         profgps = profgps + ...
             stackdat.norm.profpsg./(stackdat.norm.profpsg_err.^2);
         profgps_err = profgps_err + ...
@@ -578,14 +543,14 @@ for im=1:4
     ylabel('I [nW/m^2/sr]', 'fontsize',15)
     
     subplot(2,4,im+4)
-    errorbar(r_arr, ecb, excess(ifield).cb(im).errd,'r.','markersize',10);hold on
+    errorbar(r_arr, ecb, excess(ifield).cb(im).errdf,'r.','markersize',10);hold on
     errorbar(r_arr, ecb, ecb_err,'k.','markersize',10);
     sp = find(r_arr > 100);
     v = excess(ifield).cb(im).ihl100;
     e = excess(ifield).cb(im).err100;
     plot(r_arr(sp),v*ones(size(sp)),'color',[0.2,0.4,0.2],'linewidth',2);
     if im==4
-        h=legend({'CIBER Excess (w/o fluc.)','CIBER Excess',...
+        h=legend({'CIBER Excess (w/ fluc.)','CIBER Excess',...
             'CIBER Excess > 100 arcsec',},'Location','northeast');
         set(h,'fontsize',10)
     end
@@ -637,8 +602,8 @@ for im=1:4
         r_arr = excess(ifield).r_arr;
 
         sp = find(r_arr > 100);
-        v = excess(ifield).ihl(im).ihl100;
-        e = excess(ifield).ihl(im).err100;
+        v = excess(ifield).cb(im).ihl100;
+        e = excess(ifield).cb(im).err100;
         errorbar(ifield-3,v,e,'k.','markersize',10);hold on
     end
     plot([0,6],[0,0],'b--')
@@ -677,8 +642,8 @@ for ifield = 4:8
     m_max = excess(ifield).mag(im).m_max;
     r_arr = excess(ifield).r_arr;
 
-    ihl = excess(ifield).ihl(im).ihl;
-    ihl_err = excess(ifield).ihl(im).err;
+    ihl = excess(ifield).cb(im).ihl;
+    ihl_err = excess(ifield).cb(im).err;
     ihldat(ifield-3,:) = ihl;
     errdat(ifield-3,:) = ihl_err;
     
@@ -699,8 +664,8 @@ end
 ihlmid = median(ihldat);
 errmid = median(errdat);
 for ifield = 4:8
-    ihl = excess(ifield).ihl(im).ihl;
-    ihl_err = excess(ifield).ihl(im).err; 
+    ihl = excess(ifield).cb(im).ihl;
+    ihl_err = excess(ifield).cb(im).err; 
     off = 1 + (ifield - 6).*0.02;
     subplot(2,4,im)
     
@@ -732,8 +697,8 @@ end
 
 for ifield = 4:8
 
-    ihl = excess(ifield).ihl(im).ihl;
-    ihl_err = excess(ifield).ihl(im).err;
+    ihl = excess(ifield).cb(im).ihl;
+    ihl_err = excess(ifield).cb(im).err;
 
     off = 1 + (ifield - 6).*0.02;
     subplot(2,4,im + 4)

@@ -1,5 +1,5 @@
 function [srcdat]=ps_src_select(flight,inst,ifield,m_min,m_max,...
-    mask_inst,stackband,varargin)
+    mask_inst,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % select sources to be stack
 % sample_type:
@@ -17,12 +17,11 @@ p = inputParser;
   p.addRequired('m_min',@isnumeric);
   p.addRequired('m_max',@isnumeric);
   p.addRequired('mask_inst',@isnumeric);
-  p.addRequired('stackband',@ischar);
   p.addOptional('Nsub',16,@isnumeric);
   p.addOptional('sample_type','all',@ischar);
   p.addOptional('make_plot',false,@islogical);
   p.addOptional('HSC',false,@islogical);
-  p.parse(flight,inst,ifield,m_min,m_max,mask_inst,stackband,varargin{:});
+  p.parse(flight,inst,ifield,m_min,m_max,mask_inst,varargin{:});
 
   flight   = p.Results.flight;
   inst     = p.Results.inst;
@@ -30,7 +29,6 @@ p = inputParser;
   m_min    = p.Results.m_min;
   m_max    = p.Results.m_max;
   mask_inst= p.Results.mask_inst;
-  stackband= p.Results.stackband;
   sample_type = p.Results.sample_type;
   Nsub     = p.Results.Nsub;
   make_plot= p.Results.make_plot;
@@ -40,37 +38,128 @@ p = inputParser;
 mypaths=get_paths(flight);
 
 if ~HSC
-    catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/TM',...
-        num2str(inst),'/PanSTARRS/');
+    catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/PanSTARRS/');
 
     dt=get_dark_times(flight,inst,ifield);
 
     %%% read cat data %%%
-    catfile=strcat(catdir,dt.name,'.txt');
+    catfile=strcat(catdir,dt.name,'.csv');
 
     M = csvread(catfile,1);
+    x1_arr=squeeze(M(:,4)');
+    y1_arr=squeeze(M(:,3)');
+    x2_arr=squeeze(M(:,6)');
+    y2_arr=squeeze(M(:,5)');    
 
-    x_arr=squeeze(M(:,4)');
-    y_arr=squeeze(M(:,3)');
-    x_arr=x_arr+1;
-    y_arr=y_arr+1;
-    cls_arr=squeeze(M(:,11)');
+    x1_arr=x1_arr+1;
+    y1_arr=y1_arr+1;
+    x2_arr=x2_arr+1;
+    y2_arr=y2_arr+1;
+
+    cls_arr=squeeze(M(:,13)');
     cls_arr(cls_arr==3)=1;
     cls_arr(cls_arr==6)=-1;
-    photz_arr=squeeze(M(:,12)');
+    photz_arr=squeeze(M(:,14)');
 
-    if strcmp(stackband,'y')
-        m_arr=squeeze(M(:,9)');
-    elseif strcmp(stackband,'Ilin')
-        m_arr=squeeze(M(:,14)');
-    elseif strcmp(stackband,'Hlin')
-        m_arr=squeeze(M(:,15)');
-    elseif strcmp(stackband,'I')
-        m_arr=squeeze(M(:,21)');
-    elseif strcmp(stackband,'H')
-        m_arr=squeeze(M(:,22)');
+%     if strcmp(stackband,'y')
+%         m_arr=squeeze(M(:,11)');
+%     elseif strcmp(stackband,'Ilin')
+%         m_arr=squeeze(M(:,16)');
+%     elseif strcmp(stackband,'Hlin')
+%         m_arr=squeeze(M(:,17)');
+%     elseif strcmp(stackband,'I')
+%         m_arr=squeeze(M(:,23)');
+%     elseif strcmp(stackband,'H')
+%         m_arr=squeeze(M(:,24)');
+%     end
+    m_arr=squeeze(M(:,23)');% always select by I band
+    
+    sp=find(x1_arr>0.5 & x1_arr<1024.5 & y1_arr>0.5 & y1_arr<1024.5 & ...
+        x2_arr>0.5 & x2_arr<1024.5 & y2_arr>0.5 & y2_arr<1024.5);
+
+    x1_arr = x1_arr(sp);
+    y1_arr = y1_arr(sp);
+    x2_arr = x2_arr(sp);
+    y2_arr = y2_arr(sp);
+    m_arr = m_arr(sp);
+    cls_arr = cls_arr(sp);
+    photz_arr=photz_arr(sp);
+
+    %%% count the center pix map
+    x1round_arr=round(x1_arr);
+    y1round_arr=round(y1_arr);
+    x2round_arr=round(x2_arr);
+    y2round_arr=round(y2_arr);
+    centnum_map1 = zeros(1024);
+    centnum_map2 = zeros(1024);
+    for i=1:numel(x1round_arr)
+        centnum_map1(x1round_arr(i),y1round_arr(i))=...
+            centnum_map1(x1round_arr(i),y2round_arr(i))+1;
+    end
+    for i=1:numel(x2round_arr)
+        centnum_map2(x2round_arr(i),y2round_arr(i))=...
+            centnum_map2(x1round_arr(i),y2round_arr(i))+1;
     end
     
+    spg=find(m_arr<=m_max & m_arr>m_min & cls_arr==1 & photz_arr >= 0);
+    sps=find(m_arr<=m_max & m_arr>m_min & cls_arr==-1);
+    sp = [sps,spg];
+
+    m_arr=m_arr(sp);
+    x1_arr=x1_arr(sp);
+    y1_arr=y1_arr(sp);
+    x2_arr=x2_arr(sp);
+    y2_arr=y2_arr(sp);
+    z_arr=photz_arr(sp);
+    cls_arr=ones(size(m_arr));
+    cls_arr(1:numel(sps))=-1;
+
+    %%% select sources not coexist with others in the same pixel %%%
+    mask_inst1 = squeeze(mask_inst(1,:,:));
+    mask_inst2 = squeeze(mask_inst(2,:,:));
+    subm_arr=[];
+    subx1_arr=[];
+    suby1_arr=[];
+    subx2_arr=[];
+    suby2_arr=[];
+    subz_arr=[];
+    subcls_arr=[];
+    for i=1:numel(sp)
+        if centnum_map1(round(x1_arr(i)),round(y1_arr(i)))==1 ...
+                & centnum_map2(round(x2_arr(i)),round(y2_arr(i)))==1 ...
+                & mask_inst1(round(x1_arr(i)),round(y1_arr(i)))==1 ...
+                & mask_inst2(round(x2_arr(i)),round(y2_arr(i)))==1
+            subm_arr=[subm_arr,m_arr(i)];
+            subx1_arr=[subx1_arr,x1_arr(i)];
+            suby1_arr=[suby1_arr,y1_arr(i)];
+            subx2_arr=[subx2_arr,x2_arr(i)];
+            suby2_arr=[suby2_arr,y2_arr(i)];
+            subz_arr=[subz_arr,z_arr(i)];
+            subcls_arr=[subcls_arr,cls_arr(i)];
+        end
+    end
+    
+    randidx = randperm(numel(subm_arr));
+    if inst==1
+        x_arr = subx1_arr(randidx);
+        y_arr = suby1_arr(randidx);
+    else
+        x_arr = subx2_arr(randidx);
+        y_arr = suby2_arr(randidx);        
+    end
+    
+    z_arr = subz_arr(randidx);
+    m_arr = subm_arr(randidx);
+    cls_arr = subcls_arr(randidx);
+
+    xg_arr = x_arr(cls_arr==1);
+    yg_arr = y_arr(cls_arr==1);
+    mg_arr = m_arr(cls_arr==1);
+    zg_arr = z_arr(cls_arr==1);
+    xs_arr = x_arr(cls_arr==-1);
+    ys_arr = y_arr(cls_arr==-1);
+    ms_arr = m_arr(cls_arr==-1);
+   
 else
     hsc_idx = ifield;
     catdir=mypaths.hsccatdir;
@@ -88,33 +177,25 @@ else
     cls_arr=squeeze(M(:,12)');
     photz_arr=squeeze(M(:,14)');
 
-    if strcmp(stackband,'I')
-        m_arr=squeeze(M(:,10)');
-    elseif strcmp(stackband,'H')
-        m_arr=squeeze(M(:,11)');
-    end
+%     if inst==1
+%         m_arr=squeeze(M(:,10)');
+%     else
+%         m_arr=squeeze(M(:,11)');
+%     end
+    m_arr=squeeze(M(:,10)');% always select by I band mag
     
-end
+    sp=find(x_arr>0.5 & x_arr<1024.5 & y_arr>0.5 & y_arr<1024.5);
 
-sp=find(x_arr>0.5 & x_arr<1024.5 & y_arr>0.5 & y_arr<1024.5);
+    x_arr = x_arr(sp);
+    y_arr = y_arr(sp);
+    m_arr = m_arr(sp);
+    cls_arr = cls_arr(sp);
+    photz_arr=photz_arr(sp);
 
-x_arr = x_arr(sp);
-y_arr = y_arr(sp);
-m_arr = m_arr(sp);
-cls_arr = cls_arr(sp);
-photz_arr=photz_arr(sp);
+    %%% count the center pix map
+    xround_arr=round(x_arr);
+    yround_arr=round(y_arr);
 
-%%% count the center pix map
-xround_arr=round(x_arr);
-yround_arr=round(y_arr);
-
-if ~HSC
-    centnum_map = zeros(1024);
-    for i=1:numel(xround_arr)
-        centnum_map(xround_arr(i),yround_arr(i))=...
-            centnum_map(xround_arr(i),yround_arr(i))+1;
-    end
-else
     centnum_map = zeros(1024);
     for i=1:numel(xround_arr)
         if m_arr(i)<20
@@ -122,48 +203,49 @@ else
                 centnum_map(xround_arr(i),yround_arr(i))+1;
         end
     end
-end
-spg=find(m_arr<=m_max & m_arr>m_min & cls_arr==1 & photz_arr >= 0);
-sps=find(m_arr<=m_max & m_arr>m_min & cls_arr==-1);
-sp = [sps,spg];
+    spg=find(m_arr<=m_max & m_arr>m_min & cls_arr==1 & photz_arr >= 0);
+    sps=find(m_arr<=m_max & m_arr>m_min & cls_arr==-1);
+    sp = [sps,spg];
 
-m_arr=m_arr(sp);
-x_arr=x_arr(sp);
-y_arr=y_arr(sp);
-z_arr=photz_arr(sp);
-cls_arr=ones(size(x_arr));
-cls_arr(1:numel(sps))=-1;
+    m_arr=m_arr(sp);
+    x_arr=x_arr(sp);
+    y_arr=y_arr(sp);
+    z_arr=photz_arr(sp);
+    cls_arr=ones(size(x_arr));
+    cls_arr(1:numel(sps))=-1;
 
-%%% select sources not coexist with others in the same pixel %%%
-subm_arr=[];
-subx_arr=[];
-suby_arr=[];
-subz_arr=[];
-subcls_arr=[];
-for i=1:numel(sp)
-    if centnum_map(round(x_arr(i)),round(y_arr(i)))==1 ...        
-            & mask_inst(round(x_arr(i)),round(y_arr(i)))==1
-        subm_arr=[subm_arr,m_arr(i)];
-        subx_arr=[subx_arr,x_arr(i)];
-        suby_arr=[suby_arr,y_arr(i)];
-        subz_arr=[subz_arr,z_arr(i)];
-        subcls_arr=[subcls_arr,cls_arr(i)];
+    %%% select sources not coexist with others in the same pixel %%%
+    subm_arr=[];
+    subx_arr=[];
+    suby_arr=[];
+    subz_arr=[];
+    subcls_arr=[];
+    for i=1:numel(sp)
+        if centnum_map(round(x_arr(i)),round(y_arr(i)))==1 ...        
+                & mask_inst(round(x_arr(i)),round(y_arr(i)))==1
+            subm_arr=[subm_arr,m_arr(i)];
+            subx_arr=[subx_arr,x_arr(i)];
+            suby_arr=[suby_arr,y_arr(i)];
+            subz_arr=[subz_arr,z_arr(i)];
+            subcls_arr=[subcls_arr,cls_arr(i)];
+        end
     end
-end
-randidx = randperm(numel(subx_arr));
-x_arr = subx_arr(randidx);
-y_arr = suby_arr(randidx);
-z_arr = subz_arr(randidx);
-m_arr = subm_arr(randidx);
-cls_arr = subcls_arr(randidx);
+    
+    randidx = randperm(numel(subm_arr));
+    x_arr = subx_arr(randidx);
+    y_arr = suby_arr(randidx);
+    z_arr = subz_arr(randidx);
+    m_arr = subm_arr(randidx);
+    cls_arr = subcls_arr(randidx);
 
-xg_arr = x_arr(cls_arr==1);
-yg_arr = y_arr(cls_arr==1);
-mg_arr = m_arr(cls_arr==1);
-zg_arr = z_arr(cls_arr==1);
-xs_arr = x_arr(cls_arr==-1);
-ys_arr = y_arr(cls_arr==-1);
-ms_arr = m_arr(cls_arr==-1);
+    xg_arr = x_arr(cls_arr==1);
+    yg_arr = y_arr(cls_arr==1);
+    mg_arr = m_arr(cls_arr==1);
+    zg_arr = z_arr(cls_arr==1);
+    xs_arr = x_arr(cls_arr==-1);
+    ys_arr = y_arr(cls_arr==-1);
+    ms_arr = m_arr(cls_arr==-1);
+end
 %%
 if strcmp(sample_type,'all')
     srcdat.sample_type = sample_type;

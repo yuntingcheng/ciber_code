@@ -1,81 +1,24 @@
 function [clipmax_arr, clipmin_arr,rbins]=...
 stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
-mask_inst,strnum,Nsrc,verbose,stackband,idx_stack_arr,rmin)
+mask_inst,strnum,Nsrc,verbose,idx_stack_arr,rmin,use2m)
 %%
-mypaths=get_paths(flight);
+if use2m
+    srcdat = tm_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
+    'sample_type','all');
+    subx_arr = srcdat.xs_arr;
+    suby_arr = srcdat.ys_arr;
+    subm_arr = srcdat.ms_arr;
 
-catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/TM',...
-    num2str(inst),'/PanSTARRS/');
+else
+    srcdat = ps_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
+    'sample_type','all');
+    subx_arr = [srcdat.xg_arr,srcdat.xs_arr];
+    suby_arr = [srcdat.yg_arr,srcdat.ys_arr];
+    subm_arr = [srcdat.mg_arr,srcdat.ms_arr];
 
-dt=get_dark_times(flight,inst,ifield);
-
-%%% read cat data %%%
-catfile=strcat(catdir,dt.name,'.txt');
-
-M = csvread(catfile,1);
-
-x_arr=squeeze(M(:,4)');
-y_arr=squeeze(M(:,3)');
-x_arr=x_arr+1;
-y_arr=y_arr+1;
-
-cls_arr=squeeze(M(:,11)');
-cls_arr(cls_arr==3)=1;
-cls_arr(cls_arr==6)=-1;
-photz_arr=squeeze(M(:,12)');
-
-if strcmp(stackband,'y')
-    m_arr=squeeze(M(:,9)');
-elseif strcmp(stackband,'Ilin')
-    m_arr=squeeze(M(:,14)');
-elseif strcmp(stackband,'Hlin')
-    m_arr=squeeze(M(:,15)');
-elseif strcmp(stackband,'I')
-    m_arr=squeeze(M(:,21)');
-elseif strcmp(stackband,'H')
-    m_arr=squeeze(M(:,22)');
 end
 
-sp=find(x_arr>0.5 & x_arr<1024.5 & y_arr>0.5 & y_arr<1024.5);
-
-x_arr = x_arr(sp);
-y_arr = y_arr(sp);
-m_arr = m_arr(sp);
-cls_arr = cls_arr(sp);
-photz_arr=photz_arr(sp);
-
-%%% count the center pix map
-xround_arr=round(x_arr);
-yround_arr=round(y_arr);
-
-centnum_map = zeros(1024);
-for i=1:numel(xround_arr)
-    centnum_map(xround_arr(i),yround_arr(i))=...
-        centnum_map(xround_arr(i),yround_arr(i))+1;
-end
-
-%%% select sources %%%
-spg=find(m_arr<=m_max & m_arr>m_min & cls_arr==1 & photz_arr >= 0);
-sps=find(m_arr<=m_max & m_arr>m_min & cls_arr==-1);
-sp = [sps,spg];
-
-
-submtot_arr=m_arr(sp);
-subxtot_arr=x_arr(sp);
-subytot_arr=y_arr(sp);
-
-%%% select sources not coexist with others in the same pixel %%%
-subm_arr=[];
-subx_arr=[];
-suby_arr=[];
-for i=1:numel(sp)
-    if centnum_map(round(subxtot_arr(i)),round(subytot_arr(i)))==1 ...        
-            & mask_inst(round(subxtot_arr(i)),round(subytot_arr(i)))==1
-        subm_arr=[subm_arr,submtot_arr(i)];
-        subx_arr=[subx_arr,subxtot_arr(i)];
-        suby_arr=[suby_arr,subytot_arr(i)];
-    end
-end
+mask_inst = squeeze(mask_inst(inst,:,:));
 
 %%% set up stacking %%%
 if isnan(rmin)
@@ -179,4 +122,5 @@ for ibin=5:nbins
     clipmin_arr(2,ibin) = Q1-3*IQR;
 
 end
+
 return

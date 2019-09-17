@@ -1,4 +1,4 @@
-function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max,Ith,varargin)
+function [mask,num]=make_mask_2m(flight,inst,ifield,m_min,m_max,Ith,varargin)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Produce the mask from 2MASS
 %Use mag extrapolated to PanSTARRS y band 
@@ -16,7 +16,6 @@ function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max,Ith,varargi
   
   p.addRequired('flight',@isnumeric);
   p.addRequired('inst',@isnumeric);
-  p.addRequired('band',@ischar);
   p.addRequired('ifield',@isnumeric);
   p.addRequired('m_min',@isnumeric);
   p.addRequired('m_max',@isnumeric);
@@ -24,11 +23,10 @@ function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max,Ith,varargi
   p.addOptional('rmin',nan,@isnumeric);
   p.addOptional('PSmatch',nan,@isnumeric);
   p.addOptional('verbose',true,@islogical);
-  p.parse(flight,inst,band,ifield,m_min,m_max,Ith,varargin{:});
+  p.parse(flight,inst,ifield,m_min,m_max,Ith,varargin{:});
 
   flight   = p.Results.flight;
   inst     = p.Results.inst;
-  band     = p.Results.band;
   ifield   = p.Results.ifield;
   m_min    = p.Results.m_min;
   m_max    = p.Results.m_max;
@@ -38,34 +36,46 @@ function [mask,num]=make_mask_2m(flight,inst,band,ifield,m_min,m_max,Ith,varargi
   verbose  = p.Results.verbose;
   clear p varargin;
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mypaths=get_paths(flight);
 
-catdir=strcat('/Users/ytcheng/ciber/doc/20170617_Stacking/maps/catcoord/TM',...
-    num2str(inst),'/PSC/');
+catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/PSC/');
 
 dt=get_dark_times(flight,inst,ifield);
 
 %%% read cat data %%%
-catfile=strcat(catdir,dt.name,'.txt');
+catfile=strcat(catdir,dt.name,'.csv');
 
 M = csvread(catfile,1);
 
-x_arr=squeeze(M(:,4)');
-y_arr=squeeze(M(:,3)');
+if inst==1
+    x_arr=squeeze(M(:,4)');
+    y_arr=squeeze(M(:,3)');
+else
+    x_arr=squeeze(M(:,6)');
+    y_arr=squeeze(M(:,5)');
+end
+
 x_arr=x_arr+1;
 y_arr=y_arr+1;
 
-keySet =   {'j','h','k','I','H','y'};
-idxSet = [5,6,7,8,9,10];
-idxObj = containers.Map(keySet,idxSet);
-
-m_arr=squeeze(M(:,idxObj(band))');
-
-if PSmatch~=0
-    match_arr = squeeze(M(:,11)');
-    sp=find(m_arr<=m_max & m_arr>m_min & match_arr==0);
+% keySet =   {'j','h','k','I','H','y'};
+% idxSet = [5,6,7,8,9,10];
+% idxObj = containers.Map(keySet,idxSet);
+% m_arr=squeeze(M(:,idxObj(band))');
+if inst==1
+    m_arr=squeeze(M(:,10)');
 else
-    sp=find(m_arr<=m_max & m_arr>m_min);
+    m_arr=squeeze(M(:,11)');
 end
+
+mI_arr = squeeze(M(:,10)');
+if PSmatch~=0
+    match_arr = squeeze(M(:,13)');
+    sp=find(mI_arr<=m_max & mI_arr>m_min & match_arr==0);
+else
+    sp=find(mI_arr<=m_max & mI_arr>m_min);
+end
+
 subm_arr=m_arr(sp);
 subx_arr=x_arr(sp);
 suby_arr=y_arr(sp);

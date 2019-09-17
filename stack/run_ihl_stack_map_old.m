@@ -1,27 +1,25 @@
-function run_ihl_stack_map_fluc(flight,inst,ifield,iter_arr,varargin)
+function run_ihl_stack_map_old(flight,inst,ifield,varargin)
   p = inputParser;
   
   p.addRequired('flight',@isnumeric);
   p.addRequired('inst',@isnumeric);
   p.addRequired('ifield',@isnumeric);
-  p.addRequired('iter_arr',@isnumeric);
   p.addOptional('masklim',false,@islogical);
   p.addOptional('sample_type','jack_random',@ischar);
-
-  p.parse(flight,inst,ifield,iter_arr,varargin{:});
+  p.addOptional('subpix',true,@isnumeric);
+  
+  p.parse(flight,inst,ifield,varargin{:});
 
   flight   = p.Results.flight;
   inst     = p.Results.inst;
   ifield   = p.Results.ifield;
-  iter_arr   = p.Results.iter_arr;
   masklim = p.Results.masklim;
   sample_type=p.Results.sample_type;
+  subpix   = p.Results.subpix;
   clear p varargin;
 %%
 mypaths=get_paths(flight);
 dt=get_dark_times(flight,inst,ifield);
-loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-
 load(sprintf('%s/TM%d/stackmapdat',mypaths.alldat,1),'stackmapdat');
 stackmapdat1 = stackmapdat;
 load(sprintf('%s/TM%d/stackmapdat',mypaths.alldat,2),'stackmapdat');
@@ -32,15 +30,7 @@ if inst==1
 else
     stackmapdat = stackmapdat2;
 end
-
-if masklim
-    load(sprintf('%s/stackdat_%s_masklim',...
-        loaddir,dt.name),'stackdatall');        
-else
-    load(sprintf('%s/stackdat_%s',...
-        loaddir,dt.name),'stackdatall');
-end
-
+    
 dx = 1200;
 verbose = false;
 cbmap = stackmapdat(ifield).cbmap;
@@ -49,17 +39,12 @@ m_min_arr = stackmapdat(ifield).m_min_arr;
 m_max_arr = stackmapdat(ifield).m_max_arr;
 m_min_arr = m_min_arr(10:13);
 m_max_arr = m_max_arr(10:13);
-nsim = 30;
+nsim = 100;
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-
-nbins = 25;
-profile = radial_prof(ones(2*dx+1),ones(2*dx+1),dx+1,dx+1,1,nbins);
-rbinedges = profile.binedges;
-rbins = binedges2bins(rbinedges).*0.7;
-sp100 = find(rbins>100);
 %%
 for im= 1:numel(m_min_arr)
+%%
     m_min = m_min_arr(im);
     m_max = m_max_arr(im);
     mask_inst = zeros([2,1024,1024]);
@@ -81,40 +66,15 @@ for im= 1:numel(m_min_arr)
     
     srcdat = ps_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
     'sample_type',sample_type);
-
-    [clipmaxs, clipmins, ~]=...
+%%  
+    [clipmaxs, clipmins, r_arr]=...
     stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
-    mask_inst,strnum,1000,verbose,[],nan);
+    mask_inst,strnum,1000,verbose,[],nan,false);
+    stackdat.r_arr = r_arr;
+    sp100 = find(r_arr>100);
     mask_inst = squeeze(mask_inst(inst,:,:));
-    
-    tempdat(im).mask_inst = mask_inst;
-    tempdat(im).strmask = strmask;
-    tempdat(im).strnum = strnum;
-    tempdat(im).srcdat = srcdat;
-    tempdat(im).clipmaxs = clipmaxs;
-    tempdat(im).clipmins = clipmins;
-    tempdat(im).normcb = stackdatall(im).stackdat.norm.normcb;
-    tempdat(im).normps = stackdatall(im).stackdat.norm.normps;
-    
-end
-%%
-for iter=iter_arr
-cbmap1 = psmap + sigmap_from_mz14(1024,7);
-for im= 1:numel(m_min_arr)
-    stackdat.r_arr = rbins;
-    m_min = m_min_arr(im);
-    m_max = m_max_arr(im);
-    stackdat.m_min = m_min;
-    stackdat.m_max = m_max;
-    mask_inst = tempdat(im).mask_inst;
-    strmask = tempdat(im).strmask;
-    strnum = tempdat(im).strnum;
-    srcdat = tempdat(im).srcdat;
-    clipmaxs = tempdat(im).clipmaxs;
-    clipmins = tempdat(im).clipmins;
 
     %%% background stack %%%
-    r_arr = rbins;
     profcbs_arr = zeros([nsim,numel(r_arr)]);
     profcbg_arr = zeros([nsim,numel(r_arr)]);
     profpss_arr = zeros([nsim,numel(r_arr)]);
@@ -125,7 +85,7 @@ for im= 1:numel(m_min_arr)
     profpsg100 = zeros([1,nsim]);
     for isim=1:nsim
         [profcb,profps,hitmap]=stackihl_ps0_hist_map_bk...
-            (dx,cbmap1,psmap,mask_inst,strmask,[srcdat.Ns,srcdat.Ng],...
+            (dx,cbmap,psmap,mask_inst,strmask,[srcdat.Ns,srcdat.Ng],...
             verbose,false);
         profcbs_arr(isim,:) = profcb(1,:);
         profcbg_arr(isim,:) = profcb(2,:);
@@ -139,8 +99,8 @@ for im= 1:numel(m_min_arr)
             sum(hitmap(1,sp100));
         profpsg100(isim) = sum(profps(2,sp100).*hitmap(2,sp100))./...
             sum(hitmap(2,sp100));
-        fprintf('stack %s, iter %d, %d<m<%d, %d stars %d gals, isim %d\n',...
-            dt.name,iter,m_min,m_max,srcdat.Ns,srcdat.Ng,isim);
+        fprintf('stack %s, %d<m<%d, %d stars %d gals, isim %d\n',...
+            dt.name,m_min,m_max,srcdat.Ns,srcdat.Ng,isim);
     end
     profcbs_err = nanstd(profcbs_arr);
     profcbg_err = nanstd(profcbg_arr);
@@ -192,30 +152,30 @@ for im= 1:numel(m_min_arr)
     stackdat.bk.profpsg100 = profpsg_100;
     stackdat.bk.profpsg_err100= profpsg_100err;
     %%%%%%%%%
-    
+
     for isub=1:16
         [~,~,~,profcbs,profpss,profhits] = ...
-            stackihl_ps0_hist_map(flight,inst,ifield,dx,cbmap1,psmap,mask_inst,...
+            stackihl_ps0_hist_map(flight,inst,ifield,dx,cbmap,psmap,mask_inst,...
             strmask,strnum,1,verbose,nan,clipmaxs,clipmins,...
             srcdat.sub(isub).xs_arr,srcdat.sub(isub).ys_arr,...
-            srcdat.sub(isub).ms_arr,false);
+            srcdat.sub(isub).ms_arr,subpix);
 
         [~,~,~,profcbg,profpsg,profhitg] = ...
-            stackihl_ps0_hist_map(flight,inst,ifield,dx,cbmap1,psmap,mask_inst,...
+            stackihl_ps0_hist_map(flight,inst,ifield,dx,cbmap,psmap,mask_inst,...
             strmask,strnum,1,verbose,nan,clipmaxs,clipmins,...
             srcdat.sub(isub).xg_arr,srcdat.sub(isub).yg_arr,...
-            srcdat.sub(isub).mg_arr,false);
+            srcdat.sub(isub).mg_arr,subpix);
 
-        fprintf('stack %s, iter %d, %d<m<%d, isub %d\n',...
-            dt.name,iter, m_min,m_max,isub);
-
-        profcbs(profhits==0) = 0;
-        profpss(profhits==0) = 0;
-        profcbg(profhitg==0) = 0;
-        profpsg(profhitg==0) = 0;
+        fprintf('stack %s, %d<m<%d, %s, isub %d\n',...
+            dt.name,m_min,m_max,sample_type,isub);
 
         stackdat.sub(isub).counts = srcdat.sub(isub).Ns;
         stackdat.sub(isub).countg = srcdat.sub(isub).Ng;
+        profcbg(profhitg==0) = 0;
+        profpsg(profhitg==0) = 0;
+        profcbs(profhiss==0) = 0;
+        profpss(profhits==0) = 0;
+
         stackdat.sub(isub).profcbs = profcbs;
         stackdat.sub(isub).profcbg = profcbg;
         stackdat.sub(isub).profpss = profpss;
@@ -224,7 +184,8 @@ for im= 1:numel(m_min_arr)
         stackdat.sub(isub).profhitg = profhitg;
     end
    
-    %%% profile combining all subset
+    sp100 = find(stackdat.r_arr>100);
+  %% profile combining all subset
     profcbs = zeros(size(stackdat.r_arr));
     profcbg = zeros(size(stackdat.r_arr));
     profpss = zeros(size(stackdat.r_arr));
@@ -254,8 +215,7 @@ for im= 1:numel(m_min_arr)
     stackdat.all.profcbg100 = sum(profcbg(sp100))./sum(profhitg(sp100));
     stackdat.all.profpss100 = sum(profpss(sp100))./sum(profhits(sp100));
     stackdat.all.profpsg100 = sum(profpsg(sp100))./sum(profhitg(sp100));
-
-    %%% profile of jackknife samples (leave one out)
+  %% profile of jackknife samples (leave one out)
     for isub=1:16
         jackcbs = profcbs - stackdat.sub(isub).profcbs.*stackdat.sub(isub).profhits;
         jackcbg = profcbg - stackdat.sub(isub).profcbg.*stackdat.sub(isub).profhitg;
@@ -274,7 +234,7 @@ for im= 1:numel(m_min_arr)
         stackdat.jack(isub).profpsg100 = sum(jackpsg(sp100))./sum(jackhitg); 
         
     end
-    %%% error bar with jackknife
+  %% error bar with jackknife
     errcbs = zeros(size(stackdat.r_arr));
     errcbg = zeros(size(stackdat.r_arr));
     errpss = zeros(size(stackdat.r_arr));
@@ -309,27 +269,7 @@ for im= 1:numel(m_min_arr)
     stackdat.errjack.profpss100 = sqrt(errpss100.*(15/16));
     stackdat.errjack.profpsg100 = sqrt(errpsg100.*(15/16));
 
-        
-    %%% interpolate missing points
-    p = stackdat.all.profcbs;
-    stackdat.all.profcbs = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.all.profcbg;
-    stackdat.all.profcbg = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.all.profpss;
-    stackdat.all.profpss = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.all.profpsg;
-    stackdat.all.profpsg = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-
-    p = stackdat.errjack.profcbs;
-    stackdat.errjack.profcbs = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.errjack.profcbg;
-    stackdat.errjack.profcbg = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.errjack.profpss;
-    stackdat.errjack.profpss = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    p = stackdat.errjack.profpsg;
-    stackdat.errjack.profpsg = spline(r_arr(find(p==p)),p(find(p==p)),r_arr);
-    
-    %%% get normalized profile
+    %% get normalized profile
     profcbg = stackdat.all.profcbg - stackdat.bk.profcbg;
     profcbg100 = stackdat.all.profcbg100 - stackdat.bk.profcbg100;
     profcbg_err = sqrt(stackdat.errjack.profcbg.^2 + ...
@@ -343,7 +283,7 @@ for im= 1:numel(m_min_arr)
         stackdat.bk.profcbs_err.^2);
     profcbs_err100 = sqrt(stackdat.errjack.profcbs100.^2 + ...
         stackdat.bk.profcbs_err100.^2);
-    norm = tempdat(im).normcb;
+    norm = profcbg(1)/profcbs(1);
     profcbs = profcbs.*norm;
     profcbs100 = profcbs100.*norm;
     profcbs_err = profcbs_err.*norm;
@@ -357,7 +297,8 @@ for im= 1:numel(m_min_arr)
     stackdat.norm.profcbs100 = profcbs100;
     stackdat.norm.profcbs_err = profcbs_err;
     stackdat.norm.profcbs_err100 = profcbs_err100;
-
+    stackdat.norm.normcb = norm;
+    
     profpsg = stackdat.all.profpsg - stackdat.bk.profpsg;
     profpsg100 = stackdat.all.profpsg100 - stackdat.bk.profpsg100;
     profpsg_err = sqrt(stackdat.errjack.profpsg.^2 + ...
@@ -371,7 +312,7 @@ for im= 1:numel(m_min_arr)
         stackdat.bk.profpss_err.^2);
     profpss_err100 = sqrt(stackdat.errjack.profpss100.^2 + ...
         stackdat.bk.profpss_err100.^2);
-    norm = tempdat(im).normps;
+    norm = profpsg(1)/profpss(1);
     profpss = profpss.*norm;
     profpss100 = profpss100.*norm;
     profpss_err = profpss_err.*norm;
@@ -385,7 +326,8 @@ for im= 1:numel(m_min_arr)
     stackdat.norm.profpss100 = profpss100;
     stackdat.norm.profpss_err = profpss_err;
     stackdat.norm.profpss_err100 = profpss_err100;
-
+    stackdat.norm.normps = norm;
+    
     %%% get excess profile
     diffcb = stackdat.norm.profcbg - stackdat.norm.profcbs;
     diffcb100 = stackdat.norm.profcbg100 - stackdat.norm.profcbs100;
@@ -417,20 +359,16 @@ for im= 1:numel(m_min_arr)
     stackdat.excess.diff100 = diff100;
     stackdat.excess.diff_err = diff_err;
     stackdat.excess.diff_err100 = diff_err100;
-    
-    stackdatfluc(im).stackdat = stackdat;
-    clear stackdat
-    
+
+%%  
+    stackdatall(im).stackdat = stackdat;
     if masklim
-        save(sprintf('%s/fluc/stackdatfluc_%s_masklim_iter%d',...
-            savedir,dt.name,iter),'stackdatfluc');        
+        save(sprintf('%s/stackdat_%s_masklim',...
+            savedir,dt.name),'stackdatall');        
     else
-        save(sprintf('%s/fluc/stackdatfluc_%s_iter%d',...
-            savedir,dt.name,iter),'stackdatfluc');
+        save(sprintf('%s/stackdat_%s',...
+            savedir,dt.name),'stackdatall');
     end
-
+    clear stackdat
 end
-    clear stackdatfluc
-end
-
 return

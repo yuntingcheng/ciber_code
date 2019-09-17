@@ -12,8 +12,7 @@ function map = make_srcmap_2m(flight,inst,ifield,m_min,m_max,interp,PSmatch)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mypaths=get_paths(flight);
 
-catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/TM',...
-    num2str(inst),'/PSC/');
+catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/PSC/');
 loaddir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/psf_analytic/TM',...
     num2str(inst),'/');
 load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
@@ -21,17 +20,22 @@ load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
 dt=get_dark_times(flight,inst,ifield);
 
 %%% read cat data %%%
-catfile=strcat(catdir,dt.name,'.txt');
+catfile=strcat(catdir,dt.name,'.csv');
 
 M = csvread(catfile,1);
 
-x_arr=squeeze(M(:,4)');
-y_arr=squeeze(M(:,3)');
+if inst==1
+    x_arr=squeeze(M(:,4)');
+    y_arr=squeeze(M(:,3)');
+else
+    x_arr=squeeze(M(:,6)');
+    y_arr=squeeze(M(:,5)');    
+end
 x_arr=x_arr+1;
 y_arr=y_arr+1;
 
 % y band
-m_arr=squeeze(M(:,10)');
+m_arr=squeeze(M(:,12)');
 sr = ((7./3600.0)*(pi/180.0)).^2;
 
 % use y band mag
@@ -43,11 +47,11 @@ end
 % use linear interpolated magnitude
 if interp == 1
     if inst==1
-        mcb_arr = squeeze(M(:,8)');
+        mcb_arr = squeeze(M(:,10)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,9)');
+        mcb_arr = squeeze(M(:,11)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
@@ -55,11 +59,11 @@ end
 
 if interp == 2
     if inst==1
-        mcb_arr = squeeze(M(:,8)');
+        mcb_arr = squeeze(M(:,10)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,9)');
+        mcb_arr = squeeze(M(:,11)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end

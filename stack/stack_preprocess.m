@@ -93,6 +93,9 @@ for ifield=4:8
     mask_inst_clip1(find(smcb.*mask_inst_clip.*strmask<clipminsm))=0;
     mask_inst_clip = mask_inst_clip1;
     
+    %%% !!! should mean sub cbmap, psmap after this step !!!%%%
+    %%% !!! The excess is unchanged, so mean-sub when plotting profile !!!%%%
+    
     %%% get smoothed FF err %%%
     sm = fillpadsmooth(cbmap,mask_inst_clip.*strmask,50);
     

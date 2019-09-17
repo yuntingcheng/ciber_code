@@ -22,17 +22,11 @@ map = fits_read(strcat(srcmapdir,dt.name,'_srcmap_ps_all.fits'));
 
 fprintf('make mask inst %d, field %d\n',inst,ifield);
 
-if inst == 1
-    band = 'I';
-else
-    band = 'H';
-end
-
 m_max=17;
 fprintf('ifield %d m_max = %d\n',ifield,m_max);
-[tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,0,m_max,Ith,...
+[tmmask,tmnum] = make_mask_2m(flight,inst,ifield,0,m_max,Ith,...
     'PSmatch',1,'verbose',false);
-[psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,0,m_max,Ith,...
+[psmask,psnum] = make_mask_ps(flight,inst,ifield,0,0,m_max,Ith,...
     'verbose',false);
 strmask = psmask.*tmmask;
 strnum = psnum + tmnum;
@@ -72,6 +66,7 @@ save(strcat(loaddir,'maskdat'),'maskdat');
 end
 %}
 %% HSC
+
 flight = 40030;
 inst = 2;
 ifield = 8;
@@ -81,10 +76,8 @@ else
     Ith=0.5;
 end
 mypaths=get_paths(flight);
-savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');%%%
-save(strcat(savedir,'maskdathsc'),'maskdat');%%%
 
-for hsc_idx= 3:11%0:11
+for hsc_idx= 0:11
 [field,mask_inst] = HSC_fields_info(hsc_idx);
 fprintf('make mask inst %d, %s\n',inst,field);
 srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
@@ -124,3 +117,16 @@ maskdat.mask(hsc_idx+1).strnum_stack = strnum;
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(strcat(savedir,'maskdathsc'),'maskdat');
 end
+
+% flight = 40030;
+% inst = 2;
+% ifield = 8;
+% mypaths=get_paths(flight);
+% savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+% for hsc_idx= 0:11
+%     load(strcat(savedir,'maskdathsc',num2str(hsc_idx)),'maskdat');
+% 
+%     maskdatall.mask(hsc_idx+1) = maskdat.mask(hsc_idx+1);
+% end
+% maskdat = maskdatall;
+% save(strcat(savedir,'maskdathsc'),'maskdat');

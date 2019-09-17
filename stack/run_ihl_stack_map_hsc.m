@@ -35,11 +35,6 @@ rbinedges = profile.binedges;
 rbins = binedges2bins(rbinedges).*0.7;
 clipmaxs = ones([2,nbins])*inf;
 clipmins = -ones([2,nbins])*inf;
-if inst == 1
-    stackband = 'I';
-else
-    stackband = 'H';
-end
 %%
 for im= 1:numel(m_min_arr)
 
@@ -59,7 +54,7 @@ for im= 1:numel(m_min_arr)
     stackdat.m_min = m_min;
     stackdat.m_max = m_max;
     
-    srcdat = ps_src_select(flight,inst,hsc_idx,m_min,m_max,mask_inst,stackband,...
+    srcdat = ps_src_select(flight,inst,hsc_idx,m_min,m_max,mask_inst,...
     'sample_type',sample_type,'Nsub',10,'HSC',true);
 
     stackdat.r_arr = rbins;
@@ -144,10 +139,10 @@ end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 if masklim
-    save(sprintf('%s/stackdathsc_%s_masklim',...
+    save(sprintf('%s/hsc/stackdathsc_%s_masklim',...
         savedir,name),'stackdathsc');        
 else
-    save(sprintf('%s/stackdathsc_%s',...
+    save(sprintf('%s/hsc/stackdathsc_%s',...
         savedir,name),'stackdathsc');
 end
 clear stackdat

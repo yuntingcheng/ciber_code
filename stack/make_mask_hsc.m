@@ -26,9 +26,9 @@ if inst==1
 elseif inst==2
     m_arr = squeeze(M(:,11)');
 end
+mI_arr = squeeze(M(:,10)');
 
-
-sp=find(m_arr<=m_max & m_arr>m_min);
+sp=find(mI_arr<=m_max & mI_arr>m_min);
 subm_arr=m_arr(sp);
 subx_arr=x_arr(sp);
 suby_arr=y_arr(sp);

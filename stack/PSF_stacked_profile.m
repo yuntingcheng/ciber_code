@@ -32,5 +32,5 @@ r_arr = binedges2bins(rbinedges).*0.7;
 
 profile = radial_prof(Imap_large(Nlarge+1-dx:Nlarge+1+dx,...
     Nlarge+1-dx:Nlarge+1+dx),ones(2*dx+1),dx+1,dx+1,1,nbins);
-profpsf_arr = profile.prof;
+profpsf_arr = profile.prof./profile.prof(1);
 return

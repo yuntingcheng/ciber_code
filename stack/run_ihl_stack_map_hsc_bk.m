@@ -31,11 +31,6 @@ nbins = 25;
 profile = radial_prof(ones(2*dx+1),ones(2*dx+1),dx+1,dx+1,1,nbins);
 rbinedges = profile.binedges;
 rbins = binedges2bins(rbinedges).*0.7;
-if inst == 1
-    stackband = 'I';
-else
-    stackband = 'H';
-end
 
 N_arr = zeros([1,numel(m_min_arr)]);
 for im= 1:numel(m_min_arr)
@@ -43,7 +38,7 @@ for im= 1:numel(m_min_arr)
     m_max = m_max_arr(im);
     mask_inst = stackmapdat(hsc_idx+1).mask_inst_clip;
     srcdat = ps_src_select(flight,inst,hsc_idx,m_min,m_max,...
-        mask_inst,stackband,'HSC',true);
+        mask_inst,'HSC',true);
     N_arr(im) = srcdat.Ng;
 end
 
@@ -82,10 +77,10 @@ end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 if masklim
-    save(sprintf('%s/stackdathsc_%s_masklim_bk',...
+    save(sprintf('%s/hsc/stackdathsc_%s_masklim_bk',...
         savedir,name),'stackdathscbk');  
 else
-    save(sprintf('%s/stackdathsc_%s_bk',...
+    save(sprintf('%s/hsc/stackdathsc_%s_bk',...
         savedir,name),'stackdathscbk');
 end
 clear stackhscbk

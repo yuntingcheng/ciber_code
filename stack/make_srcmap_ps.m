@@ -13,8 +13,7 @@ function map = make_srcmap_ps(flight,inst,ifield,type,m_min,m_max,interp)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 mypaths=get_paths(flight);
 
-catdir=strcat(mypaths.ciberdir, 'doc/20170617_Stacking/maps/catcoord/TM',...
-    num2str(inst),'/PanSTARRS/');
+catdir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/maps/catcoord/PanSTARRS/');
 loaddir=strcat(mypaths.ciberdir,'doc/20170617_Stacking/psf_analytic/TM',...
     num2str(inst),'/');
 load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
@@ -22,18 +21,23 @@ load(strcat(loaddir,'fitpsfdat'),'fitpsfdat');
 dt=get_dark_times(flight,inst,ifield);
 
 %%% read cat data %%%
-catfile=strcat(catdir,dt.name,'.txt');
+catfile=strcat(catdir,dt.name,'.csv');
 
 M = csvread(catfile,1);
 
 
-x_arr=squeeze(M(:,4)');
-y_arr=squeeze(M(:,3)');
+if inst==1
+    x_arr=squeeze(M(:,4)');
+    y_arr=squeeze(M(:,3)');
+else
+    x_arr=squeeze(M(:,6)');
+    y_arr=squeeze(M(:,5)');    
+end
 x_arr=x_arr+1;
 y_arr=y_arr+1;
 
-my_arr=squeeze(M(:,9)');
-cls_arr=squeeze(M(:,11)');
+my_arr=squeeze(M(:,11)');
+cls_arr=squeeze(M(:,13)');
 cls_arr(cls_arr==3)=1;
 cls_arr(cls_arr==6)=-1;
 
@@ -49,11 +53,11 @@ end
 % use linear interpolated magnitude (but bin by y mag)
 if interp == 1
     if inst==1
-        mcb_arr = squeeze(M(:,14)');
+        mcb_arr = squeeze(M(:,16)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,15)');
+        mcb_arr = squeeze(M(:,17)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
@@ -63,11 +67,11 @@ end
 % use combined magnitude
 if interp == 2
     if inst==1
-        mcb_arr = squeeze(M(:,21)');
+        mcb_arr = squeeze(M(:,23)');
         lambdaeff=1.05;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     else
-        mcb_arr = squeeze(M(:,22)');
+        mcb_arr = squeeze(M(:,24)');
         lambdaeff=1.79;
         I_arr=3631*10.^(-mcb_arr/2.5)*(3/lambdaeff)*1e6/(sr*1e9);
     end
