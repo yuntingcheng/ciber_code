@@ -91,10 +91,14 @@ for ifield=4:8
     mask_inst_clip1 = mask_inst_clip;
     mask_inst_clip1(find(smcb.*mask_inst_clip.*strmask>clipmaxsm))=0;
     mask_inst_clip1(find(smcb.*mask_inst_clip.*strmask<clipminsm))=0;
-    mask_inst_clip = mask_inst_clip1;
     
-    %%% !!! should mean sub cbmap, psmap after this step !!!%%%
-    %%% !!! The excess is unchanged, so mean-sub when plotting profile !!!%%%
+    cbmean1 = mean(cbmap(find(mask_inst_clip1.*strmask)));
+    psmean1 = mean(psmap(find(mask_inst_clip1.*strmask)));
+    cbmap = cbmap - cbmean1;
+    psmap = psmap - psmean1;
+    cbmean = cbmean + cbmean1;
+    psmean = psmean + psmean1;
+    mask_inst_clip = mask_inst_clip1;
     
     %%% get smoothed FF err %%%
     sm = fillpadsmooth(cbmap,mask_inst_clip.*strmask,50);
@@ -143,3 +147,5 @@ elseif isnan(rmin)
 end
 
 return
+
+
