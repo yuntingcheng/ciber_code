@@ -311,11 +311,11 @@ for im= 1:numel(m_min_arr)
     stackdat.bgcov.profpsg100 = errpsg100;
     %% BG-sub profile
     stackdat.bgsub.profcbg = stackdat.all.profcbg - stackdat.bg.profcbg;
-    stackdat.bgsub.profpsg = stackdat.all.profcbg - stackdat.bg.profpsg;
+    stackdat.bgsub.profpsg = stackdat.all.profpsg - stackdat.bg.profpsg;
     stackdat.bgsub.profcbgsub = stackdat.all.profcbgsub - stackdat.bg.profcbgsub;
-    stackdat.bgsub.profpsgsub = stackdat.all.profcbgsub - stackdat.bg.profpsgsub;
+    stackdat.bgsub.profpsgsub = stackdat.all.profpsgsub - stackdat.bg.profpsgsub;
     stackdat.bgsub.profcbg100 = stackdat.all.profcbg100 - stackdat.bg.profcbg100;
-    stackdat.bgsub.profpsg100 = stackdat.all.profcbg100 - stackdat.bg.profpsg100;
+    stackdat.bgsub.profpsg100 = stackdat.all.profpsg100 - stackdat.bg.profpsg100;
     
     stackdat.bgsub.profcbpsf = psf.*stackdat.bgsub.profcbg(1);
     stackdat.bgsub.profpspsf = psfps.*stackdat.bgsub.profpsg(1);

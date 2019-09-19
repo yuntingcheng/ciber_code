@@ -121,14 +121,15 @@ save(sprintf('%s/psfdat',savedir),'psfdatallfields');
 %% plot the stack and get the combined PSF
 flight = 40030;
 mypaths=get_paths(flight);
+m_min_arr = [4,4,4,4,12,13,15];
+m_max_arr = [9,10,11,12,13,14,16];
 
 for ifield=4:8
 dt=get_dark_times(flight,inst,ifield);
 
-figure
-setwinsize(gcf, 1500, 600)
-
 for inst=[1,2]
+figure
+setwinsize(gcf, 1500, 300)
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 load(sprintf('%s/psfdat',savedir),'psfdatallfields');
 psfdatall = psfdatallfields(ifield).psfdatall;
@@ -136,7 +137,7 @@ for im= 1:numel(m_min_arr)
     off = 0.92 + im*0.02;
     psfdat = psfdatall(im).psfdat;
     r_arr = psfdat.r_arr;
-    subplot(2,3,3*inst-2)
+    subplot(1,3,1)
     loglog(r_arr.*off, psfdat.all.profcbs,'.-','color',get_color(im),...
     'DisplayName',sprintf('%d < m_J < %d (%d sources)', ...
     psfdat.m_min, psfdat.m_max, psfdat.all.counts));hold on
@@ -150,13 +151,11 @@ xlim([4e-1,1.1e3])
 ylim([1e-2,1.1e6])
 xlabel('r [arcsec]', 'fontsize',15)
 ylabel('I [nW/m^2/sr]', 'fontsize',15)
-bandname = ['I','H'];
-title(sprintf('%s band,%s',bandname(inst),dt.name),'fontsize',15);
 
 snrs = [];
 for im= 1:numel(m_min_arr)
     off = 0.92 + im*0.02;
-    subplot(2,3,3*inst-2)
+    subplot(1,3,1)
     psfdat = psfdatall(im).psfdat;
     loglog(r_arr.*off, -psfdat.all.profcbs,'o','color',get_color(im));
     errorbar(r_arr.*off, psfdat.all.profcbs, psfdat.errjack.profcbs, ...
@@ -164,7 +163,7 @@ for im= 1:numel(m_min_arr)
     errorbar(r_arr.*off, -psfdat.all.profcbs, psfdat.errjack.profcbs,...
         'o','color',get_color(im));
     if im<=4
-        subplot(2,3,3*inst-1)
+        subplot(1,3,2)
         snr = psfdat.all.profcbs./psfdat.errjack.profcbs;
         snrs = [snrs; snr(15:18)];
         semilogx(r_arr.*off, snr, ...
@@ -176,7 +175,11 @@ for im= 1:numel(m_min_arr)
         ylabel('SNR', 'fontsize',15)
     end    
 end
-subplot(2,3,3*inst)
+subplot(1,3,2)
+bandname = ['I','H'];
+title(sprintf('%s band,%s',bandname(inst),dt.name),'fontsize',15);
+
+subplot(1,3,3)
 
 im = 6;
 psfdat = psfdatall(im).psfdat;
@@ -228,19 +231,16 @@ psfdatallfields(ifield).psfps = [psfinps, psfoutps];
 psfdatallfields(ifield).psf_err = [psfin_err, psfout_err];
 psfdatallfields(ifield).psfps_err = [psfinps_err, psfoutps_err];
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-save(sprintf('%s/psfdat',savedir),'psfdatallfields');
-
-end
-pltsavedir=(strcat(mypaths.ciberdir,'doc/20171018_stackihl/stackmaps/TM',...
-    num2str(inst),'/plots/PanSTARRS/WISEclass/'));
+% save(sprintf('%s/psfdat',savedir),'psfdatallfields');
+pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
 savename = sprintf('%s/%s_psf',pltsavedir,dt.name);
 print(savename,'-dpng');close
 end
+end
 %% plot PSF of all fields
-figure
-setwinsize(gcf, 1000, 300)
+
 for inst=[1,2]
-subplot(1,2,inst)
+figure
 leg = {};
 for ifield=4:8
     dt=get_dark_times(flight,inst,ifield);
@@ -260,8 +260,10 @@ xlabel('r [arcsec]', 'fontsize',15)
 ylabel('PSF', 'fontsize',15)
 bandname = ['I','H'];
 title(sprintf('%s band',bandname(inst)),'fontsize',15);
-end
+
 pltsavedir=(strcat(mypaths.ciberdir,'doc/20171018_stackihl/stackmaps/TM',...
     num2str(inst),'/plots/PanSTARRS/WISEclass/'));
 savename = sprintf('%s/psf',pltsavedir);
 print(savename,'-dpng');close
+end
+
