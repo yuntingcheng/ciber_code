@@ -421,111 +421,208 @@ end
 
 end
 %% example chi2 test
-% ifield = 4;
-% dt=get_dark_times(flight,inst,ifield);
-% 
-% loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
-% if masklim
-%     load(sprintf('%s/stackdat_%s_masklim',...
-%             loaddir,dt.name),'stackdatall');        
-% else
-%     load(sprintf('%s/stackdat_%s',...
-%             loaddir,dt.name),'stackdatall');
-% end
-% 
-% figure
-% setwinsize(gcf,1400,300)
-% im = 2;
-% 
-% stackdat = stackdatall(im).stackdat;
-% m_min = stackdat.m_min;
-% m_max = stackdat.m_max;
-% rsub_arr = stackdat.rsub_arr;
-% 
-% cov = stackdat.cov.cbsub;
-% covi = stackdat.cov.cbsub_inv;
-% d = stackdat.excess.cbsub;
-% e = sqrt(diag(cov))';
-% 
-% subplot(1,4,1)
-% loglog(rsub_arr, d, 'k.', 'markersize', 10);hold on
-% loglog(rsub_arr, e,'b.-');
-% loglog(rsub_arr, sqrt(1./diag(covi)),'r.-');
-% h=legend({'Excess','sqrt(diag(Excess Cov))','1/sqrt(diag(Excess Cov^{-1}))'},...
-%         'Location','northeast');
-% set(h,'fontsize',10)
-% loglog(rsub_arr, -d, 'ko', 'markersize', 5);hold on
-% xlim([4e-1,1.1e3])
-% ylim([1e-1,1e2])
-% xlabel('r [arcsec]', 'fontsize',15);
-% ylabel('I [nW/m^2/sr]', 'fontsize',15);
-% 
-% 
-% diff_list = [];
-% 
-% diff = e;
-% diff_list = [diff_list;diff];
-% 
-% diff = e;
-% diff(2:2:end) = -diff(2:2:end);
-% diff_list = [diff_list;diff];
-% 
-% diff = e.*(0.1:0.1:1.5);
-% diff_list = [diff_list;diff];
-% 
-% diff = e.*(0.1:0.1:1.5);
-% diff(2:2:end) = -diff(2:2:end);
-% diff_list = [diff_list;diff];
-% 
-% diff = e.*(1.5:-0.1:0.1);
-% diff_list = [diff_list;diff];
-% 
-% diff = e.*(1.5:-0.1:0.1);
-% diff(2:2:end) = -diff(2:2:end);
-% diff_list = [diff_list;diff];
-% 
-% subplot(1,4,2)
-% for i=1:2
-%     diff = diff_list(i,:);
-%     chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
-%     chi2full = (diff*covi*diff')/numel(rsub_arr);
-%     semilogx(rsub_arr, diff./e,'-','DisplayName',...
-%         strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
-%         ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
-% end
-% h=legend('show','Location','southeast');
-% set(h,'fontsize',10)
-% xlim([4e-1,1.1e3])
-% ylim([-2,2])
-% xlabel('r [arcsec]', 'fontsize',15);
-% ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
-% 
-% subplot(1,4,3)
-% for i=3:4
-%     diff = diff_list(i,:);
-%     chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
-%     chi2full = (diff*covi*diff')/numel(rsub_arr);
-%     semilogx(rsub_arr, diff./e,'-','DisplayName',...
-%         strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
-%         ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
-% end
-% h=legend('show','Location','southeast');
-% set(h,'fontsize',10)
-% xlim([4e-1,1.1e3])
-% ylim([-2,2])
-% ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
-% 
-% subplot(1,4,4)
-% for i=5:6
-%     diff = diff_list(i,:);
-%     chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
-%     chi2full = (diff*covi*diff')/numel(rsub_arr);
-%     semilogx(rsub_arr, diff./e,'-','DisplayName',...
-%         strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
-%         ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
-% end
-% h=legend('show','Location','southeast');
-% set(h,'fontsize',10)
-% xlim([4e-1,1.1e3])
-% ylim([-2,2])
-% ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
+ifield = 4;
+dt=get_dark_times(flight,inst,ifield);
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
+load(sprintf('%s/stackdat_%s',...
+        loaddir,dt.name),'stackdatall');
+
+figure
+setwinsize(gcf,1400,300)
+im = 2;
+
+stackdat = stackdatall(im).stackdat;
+m_min = stackdat.m_min;
+m_max = stackdat.m_max;
+rsub_arr = stackdat.rsub_arr;
+
+cov = stackdat.cov.cbsub;
+covi = stackdat.cov.cbsub_inv;
+d = stackdat.excess.cbsub;
+e = sqrt(diag(cov))';
+
+subplot(1,4,1)
+loglog(rsub_arr, d, 'k.', 'markersize', 10);hold on
+loglog(rsub_arr, e,'b.-');
+loglog(rsub_arr, sqrt(1./diag(covi)),'r.-');
+h=legend({'Excess','sqrt(diag(Excess Cov))','1/sqrt(diag(Excess Cov^{-1}))'},...
+        'Location','northeast');
+set(h,'fontsize',10)
+loglog(rsub_arr, -d, 'ko', 'markersize', 5);hold on
+xlim([4e-1,1.1e3])
+ylim([1e-1,1e2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('I [nW/m^2/sr]', 'fontsize',15);
+
+
+diff_list = [];
+
+diff = e;
+diff_list = [diff_list;diff];
+
+diff = e;
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+diff = e.*(0.1:0.1:1.5);
+diff_list = [diff_list;diff];
+
+diff = e.*(0.1:0.1:1.5);
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+diff = e.*(1.5:-0.1:0.1);
+diff_list = [diff_list;diff];
+
+diff = e.*(1.5:-0.1:0.1);
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+subplot(1,4,2)
+for i=1:2
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2);
+    chi2full = (diff*covi*diff');
+    chi2mat = (diff'*diff).*covi;
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept} =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full} =',num2str(chi2full,'%.2f')));hold on
+end
+
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Delta/\sigma', 'fontsize',15);
+
+subplot(1,4,3)
+for i=3:4
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2);
+    chi2full = (diff*covi*diff');
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept} =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full} =',num2str(chi2full,'%.2f')));hold on
+end
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+ylabel('\Delta/\sigma', 'fontsize',15);
+
+subplot(1,4,4)
+for i=5:6
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2);
+    chi2full = (diff*covi*diff');
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept} =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full} =',num2str(chi2full,'%.2f')));hold on
+end
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+ylabel('\Delta/\sigma', 'fontsize',15);
+%%
+
+ifield = 4;
+dt=get_dark_times(flight,inst,ifield);
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
+load(sprintf('%s/stackdat_%s',...
+        loaddir,dt.name),'stackdatall');
+
+figure
+setwinsize(gcf,1500,600)
+im = 2;
+
+stackdat = stackdatall(im).stackdat;
+m_min = stackdat.m_min;
+m_max = stackdat.m_max;
+rsub_arr = stackdat.rsub_arr;
+
+cov = stackdat.cov.cbsub;
+covi = stackdat.cov.cbsub_inv;
+d = stackdat.excess.cbsub;
+e = sqrt(diag(cov))';
+
+diff_list = [];
+diff = e;
+diff_list = [diff_list;diff];
+diff = e;
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+for i=1:2
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2);
+    chi2full = (diff*covi*diff');
+    chi2mat = (diff'*diff).*covi;
+    subplot(2,3,1)
+    semilogx(rsub_arr, diff./e,'-');hold on
+    
+    subplot(2,3,2)
+    semilogx(rsub_arr, diff,'-','DisplayName',strcat('case',num2str(i),...
+        ': \chi^2_{indept} =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full} =',num2str(chi2full,'%.2f')));hold on 
+    
+    subplot(2,3,3+i)
+    imageclip(chi2mat);
+    caxis([-7,7]);
+    title(strcat('(Case ',num2str(i),') \Delta_i C^{-1}_{ij} \Delta_j'));
+    xticks([3:4:15])
+    xticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+        num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+    xtickangle(45)
+    yticks([3:4:15])
+    yticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+        num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+    ytickangle(45)
+
+    subplot(2,3,6)
+    cum_chi2 = zeros(size(rsub_arr));
+    for irsub=1:numel(rsub_arr)
+        cum_chi2(irsub) = sum(sum(chi2mat(1:irsub,1:irsub)));
+    end
+    loglog(rsub_arr, cum_chi2,'.-','DisplayName',strcat('case',num2str(i)));hold on
+    
+end
+
+subplot(2,3,3)
+imageclip(covi);
+caxis([-1.5,1.5]);
+h = colorbar;
+ylabel(h, '[nW/m^2/sr]^{-2}');
+title('C^{-1}');
+xticks([3:4:15])
+xticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+    num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+xtickangle(45)
+yticks([3:4:15])
+yticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+    num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+ytickangle(45)
+if im==1
+    ylabel('Excess Cov Inv.', 'fontsize',15);
+end
+
+subplot(2,3,1)
+xlim([4e-1,1.1e3])
+ylim([-1.2,1.2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Delta/\sigma', 'fontsize',15);
+
+subplot(2,3,2)
+h=legend('show','Location','northeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Delta [nW/m^2/sr]', 'fontsize',12);
+
+subplot(2,3,6)
+h=legend('show','Location','northeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Sigma \Delta C^{-1} \Delta (<r)', 'fontsize',12);

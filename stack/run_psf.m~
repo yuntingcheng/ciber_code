@@ -1,6 +1,5 @@
 %%%% run bright source stack for a range of mag bins %%%%%%
-flight = 40030;
-inst = 1;
+function run_psf_stack_map(flight,inst,ifield,varargin)
 
 mypaths=get_paths(flight);
 load(sprintf('%s/TM%d/stackmapdat',mypaths.alldat,1),'stackmapdat');
@@ -18,8 +17,7 @@ dx = 1200;
 verbose = false;
 m_min_arr = [4,4,4,4,12,13,15,16:19];
 m_max_arr = [9,10,11,12,13,14,16,17:20];
-%%
-for ifield = 4:8
+
 dt=get_dark_times(flight,inst,ifield);
 cbmap = stackmapdat(ifield).cbmap;
 psmap = stackmapdat(ifield).psmap;
@@ -55,16 +53,13 @@ for im= 1:numel(m_min_arr)
         'sample_type','jack_random','Nsub',Njack);
         % only stack 1000 src to speed up
         if srcdat.Ns>1000
-            Nstot = 0;
             for isub=1:Njack
                 Nisub = round(srcdat.sub(isub).Ns*1000/srcdat.Ns);
                 srcdat.sub(isub).xs_arr = srcdat.sub(isub).xs_arr(1:Nisub);
                 srcdat.sub(isub).ys_arr = srcdat.sub(isub).ys_arr(1:Nisub);
                 srcdat.sub(isub).ms_arr = srcdat.sub(isub).ms_arr(1:Nisub);
                 srcdat.sub(isub).Ns = Nisub;
-                Nstot = Nstot + Nisub;
-            end
-            srcdat.Ns = Nstot;
+            end 
         end
         [clipmaxs, clipmins, r_arr]=...
         stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
@@ -87,8 +82,8 @@ for im= 1:numel(m_min_arr)
         psfdat.sub(isub).counts = srcdat.sub(isub).Ns;
         profcbs(profhits==0) = 0;
         profpss(profhits==0) = 0;
-        psfdat.sub(isub).profcbs = profcbs;
-        psfdat.sub(isub).profpss = profpss;        
+        psfdat.sub(isub).profcbs = profcbs - cbmean;
+        psfdat.sub(isub).profpss = profpss - psmean;        
         psfdat.sub(isub).profhits = profhits;
     end
     
@@ -133,10 +128,11 @@ for im= 1:numel(m_min_arr)
     psfdatall(im).psfdat = psfdat;
 end
 psfdatallfields(ifield).psfdatall = psfdatall;
-end
+
+
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(sprintf('%s/psfdat',savedir),'psfdatallfields');
-
+return
 %{
 %% plot the stack and get the combined PSF
 flight = 40030;

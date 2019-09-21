@@ -1,12 +1,11 @@
 flight=40030;
-inst=1;
-masklim = false;
-savefig = false;
+inst=2;
+masklim = true;
+savefig = true;
 mypaths=get_paths(flight);
-pltsavedir=(strcat(mypaths.ciberdir,'doc/20171018_stackihl/stackmaps/TM',...
-    num2str(inst),'/plots/PanSTARRS/WISEclass/'));
+pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
 %% jackknife prof, Src prof, BG prof
-for ifield = 4%4:8
+for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
@@ -20,7 +19,7 @@ end
 
 figure
 setwinsize(gcf,1200,500)
-for im=1:2%1:4
+for im=1:4
     stackdat = stackdatall(im).stackdat;
     
     m_min = stackdat.m_min;
@@ -86,7 +85,7 @@ end
 end
 %% BG-sub prof, scaled PSF
 
-for ifield = 4%4:8
+for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
@@ -100,7 +99,7 @@ end
 
 figure
 setwinsize(gcf,1200,500)
-for im=1:2%1:4
+for im=1:4
     stackdat = stackdatall(im).stackdat;
     
     m_min = stackdat.m_min;
@@ -127,6 +126,8 @@ for im=1:2%1:4
     if im==1
         ylabel('I [nW/m^2/sr]', 'fontsize',15)
     end
+    title(strcat(num2str(m_min),'<m<',num2str(m_max),...
+        ' (',num2str(countg), ' galaxies)'),'fontsize',15)
     
     subplot(2,4,im+4)
     prof = stackdat.bgsub.profcbg;
@@ -158,7 +159,7 @@ end
 end
 %% Excess
 [hscprof,hscerr] = get_hsc_clus_prof(flight, inst, masklim);
-for ifield = 4%4:8
+for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
@@ -172,7 +173,7 @@ end
 
 figure
 setwinsize(gcf,1200,600)
-for im=1:2%1:4
+for im=1:4
     stackdat = stackdatall(im).stackdat;
     
     m_min = stackdat.m_min;
@@ -255,7 +256,7 @@ end
 
 end
 %% Cov
-for ifield = 4%4:8
+for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
@@ -269,7 +270,7 @@ end
 
 figure
 setwinsize(gcf,1400,750)
-for im=1:2%1:4
+for im=1:4
     stackdat = stackdatall(im).stackdat;
     m_min = stackdat.m_min;
     m_max = stackdat.m_max;
@@ -315,7 +316,7 @@ for im=1:2%1:4
     loglog(r_arr, epsf,'r-','linewidth',1.5);
     loglog(r_arr, etot,'k-','linewidth',2);
     loglog(r_arr, dat, 'k.', 'markersize', 10);hold on
-    if im==1
+    if im==4
         h=legend({'data err','BG err','PSF err', 'Excess err', 'Excess Data'},...
                 'Location','northeast');
         set(h,'fontsize',6)
@@ -323,14 +324,14 @@ for im=1:2%1:4
     
     loglog(r_arr, -dat, 'ko', 'markersize', 5);hold on
     xlim([4e-1,1.1e3])
-    ylim([1e-1,1e3])
+    ylim([1e-2,1.1e2])
     xlabel('r [arcsec]', 'fontsize',15);
     if im==1
         ylabel('I [nW/m^2/sr]', 'fontsize',15);
     end
 
 end
-savename = sprintf('%s%s_covs',pltsavedir,dt.name);
+savename = sprintf('%s%s_cov',pltsavedir,dt.name);
 if masklim
     suptitle(strcat(dt.name,' (mask to mag bin max)'));
     savename = strcat(savename,'_masklim'); 
@@ -343,7 +344,7 @@ end
 
 end
 %% excess cov
-for ifield = 4%4:8
+for ifield = 4:8
 dt=get_dark_times(flight,inst,ifield);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
@@ -357,7 +358,7 @@ end
 
 figure
 setwinsize(gcf,1400,750)
-for im=1:2%1:4
+for im=1:4
     stackdat = stackdatall(im).stackdat;
     m_min = stackdat.m_min;
     m_max = stackdat.m_max;
@@ -407,7 +408,7 @@ for im=1:2%1:4
     end
     
 end
-savename = sprintf('%s%s_covs',pltsavedir,dt.name);
+savename = sprintf('%s%s_excov',pltsavedir,dt.name);
 if masklim
     suptitle(strcat(dt.name,' (mask to mag bin max)'));
     savename = strcat(savename,'_masklim'); 
@@ -419,21 +420,15 @@ if savefig
 end
 
 end
-%%
-ifield = 4
+%% example chi2 test
+ifield = 4;
 dt=get_dark_times(flight,inst,ifield);
-
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
-if masklim
-    load(sprintf('%s/stackdat_%s_masklim',...
-            loaddir,dt.name),'stackdatall');        
-else
-    load(sprintf('%s/stackdat_%s',...
-            loaddir,dt.name),'stackdatall');
-end
+load(sprintf('%s/stackdat_%s',...
+        loaddir,dt.name),'stackdatall');
 
 figure
-setwinsize(gcf,800,300)
+setwinsize(gcf,1400,300)
 im = 2;
 
 stackdat = stackdatall(im).stackdat;
@@ -446,11 +441,11 @@ covi = stackdat.cov.cbsub_inv;
 d = stackdat.excess.cbsub;
 e = sqrt(diag(cov))';
 
-subplot(1,2,1)
+subplot(1,4,1)
 loglog(rsub_arr, d, 'k.', 'markersize', 10);hold on
 loglog(rsub_arr, e,'b.-');
 loglog(rsub_arr, sqrt(1./diag(covi)),'r.-');
-h=legend({'data','sqrt(diag(Excess Cov))','1/sqrt(diag(Excess Cov^{-1}))'},...
+h=legend({'Excess','sqrt(diag(Excess Cov))','1/sqrt(diag(Excess Cov^{-1}))'},...
         'Location','northeast');
 set(h,'fontsize',10)
 loglog(rsub_arr, -d, 'ko', 'markersize', 5);hold on
@@ -459,18 +454,152 @@ ylim([1e-1,1e2])
 xlabel('r [arcsec]', 'fontsize',15);
 ylabel('I [nW/m^2/sr]', 'fontsize',15);
 
-subplot(1,2,2)
-diff1 = e;
-chi2simp = sum(diff1.^2./e.^2)/numel(rsub_arr);
-chi2full = (diff1*covi*diff1')/numel(rsub_arr);
-semilogx(rsub_arr, diff1./e,'DisplayName',s('\chi^2_{indept} = %d'));hold on
+
+diff_list = [];
+
+diff = e;
+diff_list = [diff_list;diff];
+
+diff = e;
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+diff = e.*(0.1:0.1:1.5);
+diff_list = [diff_list;diff];
+
+diff = e.*(0.1:0.1:1.5);
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+diff = e.*(1.5:-0.1:0.1);
+diff_list = [diff_list;diff];
+
+diff = e.*(1.5:-0.1:0.1);
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+subplot(1,4,2)
+for i=1:2
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
+    chi2full = (diff*covi*diff')/numel(rsub_arr);
+    chi2mat = (diff'*diff).*covi;
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
+end
+
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
+
+subplot(1,4,3)
+for i=3:4
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
+    chi2full = (diff*covi*diff')/numel(rsub_arr);
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
+end
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
+
+subplot(1,4,4)
+for i=5:6
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2)/numel(rsub_arr);
+    chi2full = (diff*covi*diff')/numel(rsub_arr);
+    semilogx(rsub_arr, diff./e,'-','DisplayName',...
+        strcat('\chi^2_{indept}/dof =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full}/dof =',num2str(chi2full,'%.2f')));hold on
+end
+h=legend('show','Location','southeast');
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+ylim([-2,2])
+ylabel('(Excess - Model Excess)/\sigma', 'fontsize',15);
+%%
+
+ifield = 4;
+dt=get_dark_times(flight,inst,ifield);
+loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
+load(sprintf('%s/stackdat_%s',...
+        loaddir,dt.name),'stackdatall');
+
+figure
+setwinsize(gcf,1500,600)
+im = 2;
+
+stackdat = stackdatall(im).stackdat;
+m_min = stackdat.m_min;
+m_max = stackdat.m_max;
+rsub_arr = stackdat.rsub_arr;
+
+cov = stackdat.cov.cbsub;
+covi = stackdat.cov.cbsub_inv;
+d = stackdat.excess.cbsub;
+e = sqrt(diag(cov))';
+
+diff_list = [];
+diff = e;
+diff_list = [diff_list;diff];
+diff = e;
+diff(2:2:end) = -diff(2:2:end);
+diff_list = [diff_list;diff];
+
+for i=1:2
+    diff = diff_list(i,:);
+    chi2indept = sum(diff.^2./e.^2);
+    chi2full = (diff*covi*diff');
+    chi2mat = (diff'*diff).*covi;
+    subplot(2,3,1)
+    semilogx(rsub_arr, diff./e,'-');hold on
+    
+    subplot(2,3,2)
+    semilogx(rsub_arr, diff,'-','DisplayName',strcat('case',num2str(i),...
+        ': \chi^2_{indept} =',num2str(chi2indept,'%.2f'),...
+        ', \chi^2_{full} =',num2str(chi2full,'%.2f')));hold on 
+    
+    plot(2,3,3+i)
+    imageclip(chi2mat);
+    
+end
+
+subplot(2,3,3)
+imageclip(covi);
+caxis([-1.5,1.5]);
+h = colorbar;
+ylabel(h, '[nW/m^2/sr]^{-2}');
+title('C^{-1}');
+xticks([3:4:15])
+xticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+    num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+xtickangle(45)
+yticks([3:4:15])
+yticklabels({num2str(rsub_arr(3),'%.1e'),num2str(rsub_arr(7),'%.1e'),...
+    num2str(rsub_arr(11),'%.1e'),num2str(rsub_arr(15),'%.1e')});
+ytickangle(45)
+if im==1
+    ylabel('Excess Cov Inv.', 'fontsize',15);
+end
+
+
+subplot(2,3,1)
+xlim([4e-1,1.1e3])
+ylim([-1.2,1.2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Delta/\sigma', 'fontsize',15);
+subplot(2,3,2)
 h=legend('show','Location','northeast');
-set(h,'fontsize',15)
-legend boxoff
-
-
-diff2 = e;
-diff2(2:2:end) = -diff1(2:2:end);
-
-
-semilogx(rsub_arr, diff2./e);
+set(h,'fontsize',10)
+xlim([4e-1,1.1e3])
+% ylim([-1.2,1.2])
+xlabel('r [arcsec]', 'fontsize',15);
+ylabel('\Delta [nW/m^2/sr]', 'fontsize',12);
