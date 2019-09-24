@@ -583,7 +583,7 @@ for i=1:2
     subplot(2,3,6)
     cum_chi2 = zeros(size(rsub_arr));
     for irsub=1:numel(rsub_arr)
-        cum_chi2(irsub) = sum(sum(chi2mat(1:irsub,1:irsub)));
+        cum_chi2(irsub) = sum(sum(chi2mat(1:irsub,1:irsub)))/irsub;
     end
     loglog(rsub_arr, cum_chi2,'.-','DisplayName',strcat('case',num2str(i)));hold on
     
@@ -625,4 +625,4 @@ h=legend('show','Location','northeast');
 set(h,'fontsize',10)
 xlim([4e-1,1.1e3])
 xlabel('r [arcsec]', 'fontsize',15);
-ylabel('\Sigma \Delta C^{-1} \Delta (<r)', 'fontsize',12);
+ylabel('\Sigma \Delta C^{-1} \Delta (<r) / DoF (<r)', 'fontsize',12);

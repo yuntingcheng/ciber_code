@@ -136,13 +136,13 @@ psfdatallfields(ifield).psfdatall = psfdatall;
 end
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(sprintf('%s/psfdat',savedir),'psfdatallfields');
-
+%%
 %{
 %% plot the stack and get the combined PSF
 flight = 40030;
 mypaths=get_paths(flight);
-m_min_arr = [4,4,4,4,12,13,15];
-m_max_arr = [9,10,11,12,13,14,16];
+m_min_arr = [4,4,4,4,12,13,15,16:19];
+m_max_arr = [9,10,11,12,13,14,16,17:20];
 
 for ifield=4:8
 dt=get_dark_times(flight,inst,ifield);
@@ -162,10 +162,11 @@ for im= 1:numel(m_min_arr)
     'DisplayName',sprintf('%d < m_J < %d (%d sources)', ...
     psfdat.m_min, psfdat.m_max, psfdat.all.counts));hold on
 end
+vline(r_arr(9),'k--');
 vline(r_arr(11),'k--');
-h=legend('show','Location','southwest');
-set(h,'fontsize',8)
-legend boxoff
+% h=legend('show','Location','southwest');
+% set(h,'fontsize',8)
+% legend boxoff
 grid on
 xlim([4e-1,1.1e3])
 ylim([1e-2,1.1e6])
@@ -254,7 +255,7 @@ savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 % save(sprintf('%s/psfdat',savedir),'psfdatallfields');
 pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
 savename = sprintf('%s/%s_psf',pltsavedir,dt.name);
-print(savename,'-dpng');close
+% print(savename,'-dpng');close
 end
 end
 %% plot PSF of all fields
