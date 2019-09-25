@@ -1,2 +1,3 @@
 get_paths.m
 startup.m
+*.m~
