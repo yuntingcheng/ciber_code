@@ -44,27 +44,14 @@ for im=1:4
     end
     excb_all = sum(excb_all./(excb_err_all.^2))./sum(1./(excb_err_all.^2));
     excb_err_all = sqrt(1./sum(1./(excb_err_all.^2)));
-    hscclusdat(im).r_arr = r_arr;
     hscclusdat(im).prof = excb_all;
     hscclusdat(im).err = excb_err_all;  
+    hscclusdat(im).r_arr = r_arr;
     
     %%% fit a line %%%
-    linefitpar = polyfit(log10(r_arr(r_arr > 7)),log10(excb_all(r_arr > 7)),1);
-    hscclusdat(im).linefitpar = linefitpar;
-    model = 10.^polyval(linefitpar,log10(r_arr));
-    hscclusdat(im).linefitmodel = model;
+    c = polyfit(log10(r_arr(r_arr > 7)),log10(excb_all(r_arr > 7)),1);
+    clusfit = 10.^polyval(c,log10(r_arr(r_arr > 7)));
     
-    %%% binning ot 15 ard bins %%%
-    [rsub_arr,~] = profile_radial_binning(r_arr,weight,find(r_arr>100));
-    hscclusdat(im).rsub_arr = rsub_arr;
-    [prof15,~] = profile_radial_binning(excb_all,weight,find(r_arr>100));
-    [var15,~] = profile_radial_binning(excb_err_all.^2,weight,find(r_arr>100));
-    err15 = sqrt(var15);
-    hscclusdat(im).rsub_arr = rsub_arr;
-    hscclusdat(im).profsub = prof15;
-    hscclusdat(im).errsub = err15;
-    [model15,~] = profile_radial_binning(model,weight,find(r_arr>100));
-    hscclusdat(im).linefitmodelsub = model15;
     
 end
 

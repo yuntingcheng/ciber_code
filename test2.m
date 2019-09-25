@@ -82,37 +82,6 @@ clushsc = zeros([1,15]);
 clushsc(2:end-1) = clushscfull(7:19);
 clushsc(1) = sum(clushscfull(1:6).*w(1:6))./sum(w(1:6));
 clushsc(end) = sum(clushscfull(20:25).*w(20:25))./sum(w(20:25));
-%% Compare PSF from all field
-figure
-for ifield = 4:8
-dt=get_dark_times(flight,inst,ifield);
-loaddir=strcat(mypaths.alldat,'TM',num2str(inst));
-if masklim
-    load(sprintf('%s/stackdat_%s_masklim',...
-            loaddir,dt.name),'stackdatall');        
-else
-    load(sprintf('%s/stackdat_%s',...
-            loaddir,dt.name),'stackdatall');
-end
-r_arr = stackdatall(4).stackdat.r_arr;
-psfwin_arr0 = stackdatall(1).stackdat.psfcb;
-
-radmap = make_radius_map(zeros(2*dx+1),dx+1,dx+1).*0.7;
-psfwin_map = spline(r_arr(1:18),psfwin_arr0(1:18),radmap);
-psfwin_map(radmap > r_arr(18)) = 0;
-profile = radial_prof(psfwin_map,ones(2*dx+1),dx+1,dx+1,1,nbins);
-psfwin_arr = profile.prof./profile.prof(1);
-
-loglog(r_arr,psfwin_arr,'linewidth',1,'DisplayName',dt.name);hold on
-end
-xlim([4e-1,150])
-ylim([1e-5,1.1])
-xlabel('r [arcsec]', 'fontsize',15)
-ylabel('I / I(r=0)', 'fontsize',15)
-title('PSF');
-h=legend('show','Location','southwest');
-set(h,'fontsize',10)
-legend boxoff
 %% plot the example function param dependence
 ifield = 8;
 dt=get_dark_times(flight,inst,ifield);
@@ -445,26 +414,3 @@ xlabel('r [arcsec]', 'fontsize',15)
 ylabel('I / I(r=0)', 'fontsize',15)
 xlim([4e-1,700])
 ylim([1e-5,1.1])
-%%
-im = 2;
-rsub_arr = stackdatall(im).stackdat.rsub_arr;
-w = stackdatall(im).stackdat.radweight;
-datfull = stackdatall(im).stackdat.excess.diffcb;
-dat = zeros([1,15]);
-dat(2:end-1) = datfull(7:19);
-dat(1) = sum(datfull(1:6).*w(1:6))./sum(w(1:6));
-dat(end) = sum(datfull(20:25).*w(20:25))./sum(w(20:25));
-cov_mat = stackdatall(im).stackdat.cov.cov_matsub;
-cov_inv = stackdatall(im).stackdat.cov.cov_invsub;
-dat_err = sqrt(diag(cov_mat)');
-dat_err_inv = sqrt(diag(cov_inv))';
-loglog(rsub_arr, dat_err);hold on
-loglog(rsub_arr, 1./dat_err_inv);
-legend({'sqrt(diag(cov))','1/sqrt(diag(cov^{-1}))'});
-loglog(rsub_arr,dat,'k.','markersize',10);hold on
-loglog(rsub_arr,-dat,'ko','markersize',5);
-errorbar(rsub_arr, dat, dat_err,'k.','markersize',10);
-errorbar(rsub_arr, -dat, dat_err,'ko','markersize',5);
-xlabel('r [arcsec]', 'fontsize',15)
-ylabel('I [nW/m^2/sr]', 'fontsize',15)
-xlim([4e-1,700])

@@ -1,7 +1,7 @@
 flight=40030;
-inst=2;
+inst=1;
 masklim = true;
-savefig = true;
+savefig = false;
 mypaths=get_paths(flight);
 pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
 %% jackknife prof, Src prof, BG prof
@@ -525,7 +525,7 @@ set(h,'fontsize',10)
 xlim([4e-1,1.1e3])
 ylim([-2,2])
 ylabel('\Delta/\sigma', 'fontsize',15);
-%%
+%% chi2 matrix
 
 ifield = 4;
 dt=get_dark_times(flight,inst,ifield);
@@ -626,3 +626,4 @@ set(h,'fontsize',10)
 xlim([4e-1,1.1e3])
 xlabel('r [arcsec]', 'fontsize',15);
 ylabel('\Sigma \Delta C^{-1} \Delta (<r) / DoF (<r)', 'fontsize',12);
+%%

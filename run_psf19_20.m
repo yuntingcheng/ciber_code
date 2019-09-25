@@ -117,5 +117,5 @@ psfdat.errjack.profcbs = sqrt(errcbs.*((Njack-1)/Njack));
 psfdat.errjack.profpss = sqrt(errpss.*((Njack-1)/Njack));
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-save(sprintf('%s/psfdat19_20',savedir),'psfdat');
+save(sprintf('%s/%s_psfdat19_20',savedir,dt.name),'psfdat');
 return
