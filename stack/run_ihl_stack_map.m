@@ -32,15 +32,15 @@ else
 end
 
 % load(sprintf('%s/TM%d/psfdat',mypaths.alldat,inst),'psfdatallfields');
-load(sprintf('%s/TM%d/psfdat_%s',mypaths.alldat,inst,dt.namd),'psfdatall');
+% load(sprintf('%s/TM%d/psfdat_%s',mypaths.alldat,inst,dt.namd),'psfdatall');
 dx = 1200;
 verbose = false;
 cbmap = stackmapdat(ifield).cbmap;
 psmap = stackmapdat(ifield).psmap;
 m_min_arr = 16:19;
 m_max_arr = 17:20;
-Nbg = 100;
-Njack = 100;
+Njack = 50;
+Nbg = Njack;
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 
@@ -269,7 +269,7 @@ for im= 1:numel(m_min_arr)
     stackdat.bg.profpsgsub = mean(profpsgsub_arr);
     stackdat.bg.profcbg100 = mean(profcbg100_arr);
     stackdat.bg.profpsg100 = mean(profpsg100_arr);
-    
+    %%
     %%% BG cov %%%%%
     covcbg = zeros(numel(stackdat.r_arr));
     covpsg = zeros(numel(stackdat.r_arr));
