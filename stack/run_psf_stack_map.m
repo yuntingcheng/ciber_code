@@ -1,23 +1,19 @@
-function run_psf_stack_map(flight,inst,ifield)
-%%%%%%%%%%%%%%%%%%%%%%
-% stack PSF
-% use 2MASS j band, 4<m<12 for wing, and 15<m<16 for core.
-% Two profile matched at 11th r_arr bin (r=16.0826'')
-%%%%%%%%%%%%%%%%%%%%%%
+function run_psf_stack_map(flight,inst,ifield,varargin)
   p = inputParser;
   
   p.addRequired('flight',@isnumeric);
   p.addRequired('inst',@isnumeric);
   p.addRequired('ifield',@isnumeric);
+  p.addOptional('sample_type','jack_random',@ischar);
   
-  p.parse(flight,inst,ifield);
+  p.parse(flight,inst,ifield,varargin{:});
 
   flight   = p.Results.flight;
   inst     = p.Results.inst;
   ifield   = p.Results.ifield;
-  
+  sample_type=p.Results.sample_type;
   clear p varargin;
-%%
+
 mypaths=get_paths(flight);
 dt=get_dark_times(flight,inst,ifield);
 load(sprintf('%s/TM%d/stackmapdat',mypaths.alldat,1),'stackmapdat');
@@ -30,14 +26,15 @@ if inst==1
 else
     stackmapdat = stackmapdat2;
 end
-    
+
 dx = 1200;
 verbose = false;
+Njack = 50;
+m_min_arr = [4,4,4,4,12,13,15,16:19];
+m_max_arr = [9,10,11,12,13,14,16,17:20];
+
 cbmap = stackmapdat(ifield).cbmap;
 psmap = stackmapdat(ifield).psmap;
-m_min_arr = [4,15];
-m_max_arr = [12,16];
-
 %%
 for im= 1:numel(m_min_arr)
 
@@ -52,23 +49,43 @@ for im= 1:numel(m_min_arr)
     psfdat.m_min = m_min;
     psfdat.m_max = m_max;
     
-    srcdat = tm_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
-    'sample_type','jack_random','Nsub',10);
-    
-    if srcdat.Ns==0
-        continue
-    end
+    if m_min<16
+        srcdat = tm_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
+        'sample_type',sample_type,'Nsub',Njack);
 
-    [clipmaxs, clipmins, r_arr]=...
-    stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
-    mask_inst,strnum,1000,verbose,[],nan,true);
+        if srcdat.Ns==0
+            continue
+        end
+        [clipmaxs, clipmins, r_arr]=...
+        stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
+        mask_inst,strnum,1000,verbose,[],nan,true);
+    else
+        srcdat = ps_src_select(flight,inst,ifield,m_min,m_max,mask_inst,...
+        'sample_type',sample_type,'Nsub',Njack);
+    
+        % only stack Ncut src to speed up
+%         Ncut = 3000;
+%         if srcdat.Ns>Ncut
+%             Nstot = 0;
+%             for isub=1:Njack
+%                 Nisub = round(srcdat.sub(isub).Ns*Ncut/srcdat.Ns);
+%                 srcdat.sub(isub).xs_arr = srcdat.sub(isub).xs_arr(1:Nisub);
+%                 srcdat.sub(isub).ys_arr = srcdat.sub(isub).ys_arr(1:Nisub);
+%                 srcdat.sub(isub).ms_arr = srcdat.sub(isub).ms_arr(1:Nisub);
+%                 srcdat.sub(isub).Ns = Nisub;
+%                 Nstot = Nstot + Nisub;
+%             end
+%             srcdat.Ns = Nstot;
+%         end
+        [clipmaxs, clipmins, r_arr]=...
+        stackihl_ps0_cliplim(flight,inst,ifield,m_min,m_max,cbmap,psmap,...
+        mask_inst,strnum,1000,verbose,[],nan,false);
+    end
+    
     psfdat.r_arr = r_arr;
     mask_inst = squeeze(mask_inst(inst,:,:));
     
-    cbmean = mean(cbmap(find(mask_inst.*strmask)));
-    psmean = mean(psmap(find(mask_inst.*strmask)));
-
-    for isub=1:10
+    for isub=1:Njack
         [~,~,~,profcbs,profpss,profhits] = ...
             stackihl_ps0_hist_map(flight,inst,ifield,dx,cbmap,psmap,mask_inst,...
             strmask,strnum,1,verbose,nan,clipmaxs,clipmins,...
@@ -81,8 +98,8 @@ for im= 1:numel(m_min_arr)
         psfdat.sub(isub).counts = srcdat.sub(isub).Ns;
         profcbs(profhits==0) = 0;
         profpss(profhits==0) = 0;
-        psfdat.sub(isub).profcbs = profcbs - cbmean;
-        psfdat.sub(isub).profpss = profpss - psmean;        
+        psfdat.sub(isub).profcbs = profcbs;
+        psfdat.sub(isub).profpss = profpss;        
         psfdat.sub(isub).profhits = profhits;
     end
     
@@ -91,7 +108,7 @@ for im= 1:numel(m_min_arr)
     profpss = zeros(size(psfdat.r_arr));
     profhits = zeros(size(psfdat.r_arr));
     counts = 0;
-    for isub=1:10
+    for isub=1:Njack
         profcbs = profcbs + ...
             psfdat.sub(isub).profcbs.*psfdat.sub(isub).profhits;
         profpss = profpss + ...
@@ -101,173 +118,199 @@ for im= 1:numel(m_min_arr)
     end
     psfdat.all.profcbs = profcbs./profhits;
     psfdat.all.profpss = profpss./profhits;
+    psfdat.all.profhits = profhits;
     psfdat.all.counts = counts;
     
     %%% profile of jackknife samples (leave one out)
-    for isub=1:10
+    for isub=1:Njack
         jackcbs = profcbs - psfdat.sub(isub).profcbs.*psfdat.sub(isub).profhits;
         jackpss = profpss - psfdat.sub(isub).profpss.*psfdat.sub(isub).profhits;
         jackhits = profhits - psfdat.sub(isub).profhits;
         psfdat.jack(isub).profcbs = jackcbs./jackhits;
         psfdat.jack(isub).profpss = jackpss./jackhits;
+        psfdat.jack(isub).profhits = jackhits;
     end
     
     %%% error bar with jackknife
     errcbs = zeros(size(psfdat.r_arr));
     errpss = zeros(size(psfdat.r_arr));
-    for isub=1:10
+    for isub=1:Njack
         errcbs = errcbs + ...
             (psfdat.jack(isub).profcbs - psfdat.all.profcbs).^2;        
         errpss = errpss + ...
             (psfdat.jack(isub).profpss - psfdat.all.profpss).^2;
     end
-    psfdat.errjack.profcbs = sqrt(errcbs.*(9/10));
-    psfdat.errjack.profpss = sqrt(errpss.*(9/10));
-    
-    %%% 
-    if im==1
-        psfcbout = psfdat.all.profcbs./psfdat.all.profcbs(11);
-        psfcbout_err = psfdat.errjack.profcbs./psfdat.all.profcbs(11);
-        psfpsout = psfdat.all.profpss./psfdat.all.profpss(11);
-        psfpsout_err = psfdat.errjack.profpss./psfdat.all.profpss(11);
-    else
-        psfcbin = psfdat.all.profcbs./psfdat.all.profcbs(11);
-        psfcbin_err = psfdat.errjack.profcbs./psfdat.all.profcbs(11);        
-        psfpsin = psfdat.all.profpss./psfdat.all.profpss(11);
-        psfpsin_err = psfdat.errjack.profpss./psfdat.all.profpss(11);        
-    end  
-    
+    psfdat.errjack.profcbs = sqrt(errcbs.*((Njack-1)/Njack));
+    psfdat.errjack.profpss = sqrt(errpss.*((Njack-1)/Njack));
+    psfdatall.mag(im).psfdat = psfdat;
 end
-psfcb = psfcbout;
-psfcb_err = psfcbout_err;
-psfcb(1:11) = psfcbin(1:11);
-psfcb_err(1:11) = psfcbin_err(1:11);
-psfcb_err = psfcb_err./psfcb(1);
-psfcb = psfcb./psfcb(1);
-
-psfps = psfpsout;
-psfps_err = psfpsout_err;
-psfps(1:11) = psfpsin(1:11);
-psfps_err(1:11) = psfpsin_err(1:11);
-psfps_err = psfps_err./psfps(1);
-psfps = psfps./psfps(1);
-%%
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
 
-for masklim = [0, 1]
-    if masklim==0
-        load(sprintf('%s/stackdat_%s',savedir,dt.name),'stackdatall');
-    else
-        load(sprintf('%s/stackdat_%s_masklim',savedir,dt.name),'stackdatall');
-    end
-    
+%% combine the profile and get Cov
+
+savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+load(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
+r_arr = psfdatall.mag(11).psfdat.r_arr;
+sp100 = find(r_arr>100);
+[rsub_arr,r100] = profile_radial_binning...
+    (r_arr,psfdatall.mag(numel(m_min_arr)).psfdat.all.profhits,sp100);
+
+snrs = [];
+for im= 1:4
+    psfdat = psfdatall.mag(im).psfdat;
+    snr = psfdat.all.profcbs./psfdat.errjack.profcbs;
+    snrs = [snrs; snr(15:18)];
+end
+[~,im_out] = max(sum(snrs'));
+
 for im=1:4
-    stackdat = stackdatall(im).stackdat;
-    stackdat.psfcb = psfcb;
-    stackdat.psfcb_err = psfcb_err;
+
+im_in = im + 7;
+im_mid = 6;
+psfdatall.comb(im).r_arr = r_arr;
+psfdatall.comb(im).im_in = im_in;
+psfdatall.comb(im).im_mid = im_mid;
+psfdatall.comb(im).im_out = im_out;
+
+psfdatin = psfdatall.mag(im_in).psfdat;
+psfdatmid = psfdatall.mag(im_mid).psfdat;
+psfdatout = psfdatall.mag(im_out).psfdat;
+
+%%% combined PSF %%%%
+hit = psfdatin.all.profhits;
+hit(9:11) = psfdatmid.all.profhits(9:11);
+hit(11:end) = psfdatmid.all.profhits(11:end);
+
+psfin = psfdatin.all.profcbs;
+psfmid = psfdatmid.all.profcbs;
+psfout = psfdatout.all.profcbs;
+psfin = psfin./psfin(1);
+psfmid = psfmid./psfmid(9).*psfin(9);
+psfout = psfout./psfout(11).*psfmid(11);
+psfcomb = psfin;
+psfcomb(9:11) = psfmid(9:11);
+psfcomb(11:end) = psfout(11:end);
+[prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+psfdatall.comb(im).all.profcb = psfcomb;
+psfdatall.comb(im).all.profcbsub = prof15;
+psfdatall.comb(im).all.profcb100 = prof100;
+
+psfin = psfdatin.all.profpss;
+psfmid = psfdatmid.all.profpss;
+psfout = psfdatout.all.profpss;
+psfin = psfin./psfin(1);
+psfmid = psfmid./psfmid(9).*psfin(9);
+psfout = psfout./psfout(11).*psfmid(11);
+psfcomb = psfin;
+psfcomb(9:11) = psfmid(9:11);
+psfcomb(11:end) = psfout(11:end);
+[prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+psfdatall.comb(im).all.profps = psfcomb;
+psfdatall.comb(im).all.profpssub = prof15;
+psfdatall.comb(im).all.profps100 = prof100;
+
+psfdatall.comb(im).rsub_arr = rsub_arr;
+psfdatall.comb(im).r100 = r100;
+
+%%% combined PSF jackknife%%%%
+for isub=1:Njack
+    hit = psfdatin.jack(isub).profhits;
+    hit(9:11) = psfdatmid.jack(isub).profhits(9:11);
+    hit(11:end) = psfdatmid.jack(isub).profhits(11:end);
+
+    psfin = psfdatin.jack(isub).profcbs;
+    psfmid = psfdatmid.jack(isub).profcbs;
+    psfout = psfdatout.jack(isub).profcbs;
+    psfin = psfin./psfin(1);
+    psfmid = psfmid./psfmid(9).*psfin(9);
+    psfout = psfout./psfout(11).*psfmid(11);
+    psfcomb = psfin;
+    psfcomb(9:11) = psfmid(9:11);
+    psfcomb(11:end) = psfout(11:end);
+    [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+    psfdatall.comb(im).jack(isub).profcb = psfcomb;
+    psfdatall.comb(im).jack(isub).profcbsub = prof15;
+    psfdatall.comb(im).jack(isub).profcb100 = prof100;
     
-    norm = stackdat.norm.profcbg(1);
-    stackdat.norm.profcbpsf = psfcb.*norm;
-    stackdat.norm.profcbpsf_err = psfcb_err.*norm;
-    stackdat.norm.normcbpsf = norm;
-    stackdat.norm.profcbpsf100_upperbound = ...
-        stackdat.norm.profcbpsf(18)+stackdat.norm.profcbpsf_err(18);
-    diffcb = stackdat.norm.profcbg - stackdat.norm.profcbpsf;
-    diffcb100 = stackdat.norm.profcbg100;
-    diffcb_err = stackdat.norm.profcbg_err;
-    diffcb_err100 = stackdat.norm.profcbg_err100;
-    stackdat.excess.diffcbpsf = diffcb;
-    stackdat.excess.diffcbpsf100 = diffcb100;
-    stackdat.excess.diffcbpsf_err = diffcb_err;
-    stackdat.excess.diffcbpsf_err100 = diffcb_err100;
+    psfin = psfdatin.jack(isub).profpss;
+    psfmid = psfdatmid.jack(isub).profpss;
+    psfout = psfdatout.jack(isub).profpss;
+    psfin = psfin./psfin(1);
+    psfmid = psfmid./psfmid(9).*psfin(9);
+    psfout = psfout./psfout(11).*psfmid(11);
+    psfcomb = psfin;
+    psfcomb(9:11) = psfmid(9:11);
+    psfcomb(11:end) = psfout(11:end);
+    [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+    psfdatall.comb(im).jack(isub).profps = psfcomb;
+    psfdatall.comb(im).jack(isub).profpssub = prof15;
+    psfdatall.comb(im).jack(isub).profps100 = prof100;
     
-    norm = stackdat.norm.profpsg(1);
-    stackdat.norm.profpspsf = psfps.*norm;
-    stackdat.norm.profpspsf_err = psfps_err.*norm;
-    stackdat.norm.normpspsf = norm;
-    stackdat.norm.profpspsf100_upperbound = ...
-        stackdat.norm.profpspsf(18)+stackdat.norm.profpspsf_err(18);
-    diffps = stackdat.norm.profpsg - stackdat.norm.profpspsf;
-    diffps100 = stackdat.norm.profpsg100;
-    diffps_err = stackdat.norm.profpsg_err;
-    diffps_err100 = stackdat.norm.profpsg_err100;
-    stackdat.excess.diffpspsf = diffps;
-    stackdat.excess.diffpspsf100 = diffps100;
-    stackdat.excess.diffpspsf_err = diffps_err;
-    stackdat.excess.diffpspsf_err100 = diffps_err100;
-    
-    %%% binning inner and outer bins for cov %%%
-    Njack = numel(stackdat.jack);
-    w = 0;
-    for i=1:Njack
-        w = w + stackdat.sub(i).profhitg;
-    end
-    stackdat.radweight = w;
-    rsub_arr = zeros([1,15]);
-    rsub_arr(2:end-1) = r_arr(7:19);
-    rsub_arr(1) = sum(r_arr(1:6).*w(1:6))./sum(w(1:6));
-    rsub_arr(end) = sum(r_arr(20:25).*w(20:25))./sum(w(20:25));
-    stackdat.rsub_arr = rsub_arr;
-    
-    excess_jack = zeros([Njack,numel(r_arr)]);
-    excessin = zeros([1,Njack]);
-    excessout = zeros([1,Njack]);
-    for i=1:Njack
-        excess_jack(i,:) = (stackdat.jack(i).profcbg -...
-            stackdat.bk.profcbg) - stackdat.norm.profcbpsf;
-        excessin(i) = sum(excess_jack(i,1:6).*w(1:6))./sum(w(1:6));
-        excessout(i) = sum(excess_jack(i,20:25).*w(20:25))./sum(w(20:25));
-    end
-    excess_jacksub = zeros([Njack,15]);
-    excess_jacksub(:,2:end-1) = excess_jack(:,7:19);
-    excess_jacksub(:,1) = excessin;
-    excess_jacksub(:,end) = excessout;
-    
-    %%% get cov %%%
-    cov_mat = zeros(numel(r_arr));
-    cov_rho = zeros(numel(r_arr));
-    for i=1:numel(r_arr)
-        for j=i:numel(r_arr)
-            dati = excess_jack(:,i);
-            datj = excess_jack(:,j);
-            cov_mat(i,j) = mean(dati.*datj) - mean(dati)*mean(datj);
-            cov_rho(i,j) = cov_mat(i,j)./sqrt(var(dati)*var(datj));
-            cov_mat(j,i) = cov_mat(i,j);
-            cov_rho(j,i) = cov_rho(i,j);
-        end
-    end
-    cov_mat = cov_mat.*(Njack - 1);
-    cov_inv = inv(cov_mat);
-    stackdat.cov.cov_mat = cov_mat;
-    stackdat.cov.cov_rho = cov_rho;
-    stackdat.cov.cov_inv = cov_inv;
-    
-    cov_mat = zeros(numel(rsub_arr));
-    cov_rho = zeros(numel(rsub_arr));
-    for i=1:numel(rsub_arr)
-        for j=i:numel(rsub_arr)
-            dati = excess_jacksub(:,i);
-            datj = excess_jacksub(:,j);
-            cov_mat(i,j) = mean(dati.*datj) - mean(dati)*mean(datj);
-            cov_rho(i,j) = cov_mat(i,j)./sqrt(var(dati)*var(datj));
-            cov_mat(j,i) = cov_mat(i,j);
-            cov_rho(j,i) = cov_rho(i,j);
-        end
-    end
-    cov_mat = cov_mat.*(Njack - 1);
-    cov_inv = inv(cov_mat);
-    stackdat.cov.cov_matsub = cov_mat;
-    stackdat.cov.cov_rhosub = cov_rho;
-    stackdat.cov.cov_invsub = cov_inv;
-     
-    stackdatall(im).stackdat = stackdat;
 end
 
-if masklim==0
-    save(sprintf('%s/stackdat_%s',savedir,dt.name),'stackdatall');
-else
-    save(sprintf('%s/stackdat_%s_masklim',savedir,dt.name),'stackdatall');
+%%% combined PSF Cov from jackknife%%%%
+dat_profcb = zeros([Njack,numel(r_arr)]);
+dat_profps = zeros([Njack,numel(r_arr)]);
+dat_profcbsub = zeros([Njack,numel(rsub_arr)]);
+dat_profpssub = zeros([Njack,numel(rsub_arr)]);
+dat_profcb100 = zeros([1,Njack]);
+dat_profps100 = zeros([1,Njack]);
+    
+for isub=1:Njack
+    dat_profcb(isub,:) = psfdatall.comb(im).jack(isub).profcb;
+    dat_profps(isub,:) = psfdatall.comb(im).jack(isub).profps;
+    dat_profcbsub(isub,:) = psfdatall.comb(im).jack(isub).profcbsub;
+    dat_profpssub(isub,:) = psfdatall.comb(im).jack(isub).profpssub;
+    dat_profcb100(isub) = psfdatall.comb(im).jack(isub).profcb100;
+    dat_profps100(isub) = psfdatall.comb(im).jack(isub).profps100;
 end
     
+covcb = zeros(numel(r_arr));
+covps = zeros(numel(r_arr));
+for isub=1:numel(r_arr)
+    for jsub=1:numel(r_arr)
+        dati = dat_profcb(:,isub);
+        datj = dat_profcb(:,jsub);
+        covcb(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
+        dati = dat_profps(:,isub);
+        datj = dat_profps(:,jsub);
+        covps(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
+    end
 end
+    
+covcbsub = zeros(numel(rsub_arr));
+covpssub = zeros(numel(rsub_arr));    
+for isub=1:numel(rsub_arr)
+    for jsub=1:numel(rsub_arr)
+        dati = dat_profcbsub(:,isub);
+        datj = dat_profcbsub(:,jsub);
+        covcbsub(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
+        dati = dat_profpssub(:,isub);
+        datj = dat_profpssub(:,jsub);
+        covpssub(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
+    end
+end
+
+errcb100 = mean(dat_profcb100.^2) - mean(dat_profcb100)^2;
+errps100 = mean(dat_profps100.^2) - mean(dat_profps100)^2;
+    
+psfdatall.comb(im).datcov.profcb = covcb.*(Njack-1);
+psfdatall.comb(im).datcov.profps = covps.*(Njack-1);
+psfdatall.comb(im).datcov.profcb_rho = ...
+    normalize_cov(psfdatall.comb(im).datcov.profcb);
+psfdatall.comb(im).datcov.profps_rho = ...
+    normalize_cov(psfdatall.comb(im).datcov.profps);
+psfdatall.comb(im).datcov.profcbsub = covcbsub.*(Njack-1);
+psfdatall.comb(im).datcov.profpssub = covpssub.*(Njack-1);
+psfdatall.comb(im).datcov.profcbsub_rho = ...
+    normalize_cov(psfdatall.comb(im).datcov.profcbsub);
+psfdatall.comb(im).datcov.profpssub_rho = ...
+    normalize_cov(psfdatall.comb(im).datcov.profpssub);
+psfdatall.comb(im).datcov.profcb100 = errcb100.*(Njack-1);
+psfdatall.comb(im).datcov.profps100 = errps100.*(Njack-1);
+end
+
+save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
+
 return

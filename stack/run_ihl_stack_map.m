@@ -25,18 +25,14 @@ stackmapdat1 = stackmapdat;
 load(sprintf('%s/TM%d/stackmapdat',mypaths.alldat,2),'stackmapdat');
 stackmapdat2 = stackmapdat;
 
-load(sprintf('%s/TM%d/psfdat',mypaths.alldat,inst),'psfdatallfields');
-psf = psfdatallfields(ifield).psf;
-psfps = psfdatallfields(ifield).psfps;
-psf_var = psfdatallfields(ifield).psf_err.^2;
-psfps_var = psfdatallfields(ifield).psfps_err.^2;
-
 if inst==1
     stackmapdat = stackmapdat1;
 else
     stackmapdat = stackmapdat2;
 end
-    
+
+% load(sprintf('%s/TM%d/psfdat',mypaths.alldat,inst),'psfdatallfields');
+load(sprintf('%s/TM%d/psfdat_%s',mypaths.alldat,inst,dt.namd),'psfdatall');
 dx = 1200;
 verbose = false;
 cbmap = stackmapdat(ifield).cbmap;
@@ -44,7 +40,7 @@ psmap = stackmapdat(ifield).psmap;
 m_min_arr = 16:19;
 m_max_arr = 17:20;
 Nbg = 100;
-Njack = 16;
+Njack = 100;
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 
@@ -90,6 +86,11 @@ for im= 1:numel(m_min_arr)
     stackdat.r_arr = r_arr;
     sp100 = find(r_arr>100);
     mask_inst = squeeze(mask_inst(inst,:,:));
+
+%     psf = psfdatallfields(ifield).psf(im).psf;
+%     psfps = psfdatallfields(ifield).psf(im).psfps;
+%     psf_var = psfdatallfields(ifield).psf(im).psf_err.^2;
+%     psfps_var = psfdatallfields(ifield).psf(im).psfps_err.^2;
     %%
     for isub=1:Njack
         [~,~,~,profcbg,profpsg,profhitg] = ...
@@ -168,7 +169,7 @@ for im= 1:numel(m_min_arr)
         stackdat.jack(isub).profpsgsub = prof15;
         stackdat.jack(isub).profpsg100 = prof100;        
     end
-    %% cov with jackknife
+    %% cov from jackknife
     dat_profcbg = zeros([Njack,numel(stackdat.r_arr)]);
     dat_profpsg = zeros([Njack,numel(stackdat.r_arr)]);
     dat_profcbgsub = zeros([Njack,numel(stackdat.rsub_arr)]);
@@ -317,6 +318,9 @@ for im= 1:numel(m_min_arr)
     stackdat.bgsub.profcbg100 = stackdat.all.profcbg100 - stackdat.bg.profcbg100;
     stackdat.bgsub.profpsg100 = stackdat.all.profpsg100 - stackdat.bg.profpsg100;
     
+    psf = psfdatall.comb(im).all.profcb;
+    psfps = psfdatall.comb(im).all.profps;
+
     stackdat.bgsub.profcbpsf = psf.*stackdat.bgsub.profcbg(1);
     stackdat.bgsub.profpspsf = psfps.*stackdat.bgsub.profpsg(1);
     
@@ -328,17 +332,24 @@ for im= 1:numel(m_min_arr)
     stackdat.bgsub.profpspsf100 = psfps100.*stackdat.bgsub.profpsg(1);
     
     %% psf cov (var)
-    stackdat.psfcov.profcbpsf = diag(psf_var.*stackdat.bgsub.profcbg(1));
-    stackdat.psfcov.profpspsf = diag(psfps_var.*stackdat.bgsub.profpsg(1));
-    [psf_var15,psf_var100] = profile_radial_binning(psf_var,...
-        stackdat.all.profhitg,sp100);
-    [psfps_var15,psfps_var100] = profile_radial_binning(psfps_var,...
-        stackdat.all.profhitg,sp100);
-    stackdat.psfcov.profcbpsfsub = diag(psf_var15.*stackdat.bgsub.profcbg(1));
-    stackdat.psfcov.profpspsfsub = diag(psfps_var15.*stackdat.bgsub.profpsg(1));
-    stackdat.psfcov.profcbpsf100 = diag(psf_var100.*stackdat.bgsub.profcbg(1));
-    stackdat.psfcov.profpspsf100 = diag(psfps_var100.*stackdat.bgsub.profpsg(1));
-    
+%     stackdat.psfcov.profcbpsf = diag(psf_var.*stackdat.bgsub.profcbg(1));
+%     stackdat.psfcov.profpspsf = diag(psfps_var.*stackdat.bgsub.profpsg(1));
+%     [psf_var15,psf_var100] = profile_radial_binning(psf_var,...
+%         stackdat.all.profhitg,sp100);
+%     [psfps_var15,psfps_var100] = profile_radial_binning(psfps_var,...
+%         stackdat.all.profhitg,sp100);
+%     stackdat.psfcov.profcbpsfsub = diag(psf_var15.*stackdat.bgsub.profcbg(1));
+%     stackdat.psfcov.profpspsfsub = diag(psfps_var15.*stackdat.bgsub.profpsg(1));
+%     stackdat.psfcov.profcbpsf100 = diag(psf_var100.*stackdat.bgsub.profcbg(1));
+%     stackdat.psfcov.profpspsf100 = diag(psfps_var100.*stackdat.bgsub.profpsg(1));
+    scalecb = stackdat.bgsub.profcbg(1);
+    scaleps = stackdat.bgsub.profpsg(1);
+    stackdat.psfcov.profcbpsf = psfdatall.comb(im).datcov.profcb.*scalecb.^2;
+    stackdat.psfcov.profpspsf = psfdatall.comb(im).datcov.profps.*scaleps.^2;
+    stackdat.psfcov.profcbpsfsub = psfdatall.comb(im).datcov.profcbsub.*scalecb.^2;
+    stackdat.psfcov.profpspsfsub = psfdatall.comb(im).datcov.profpssub.*scaleps.^2;
+    stackdat.psfcov.profcbpsf100 = psfdatall.comb(im).datcov.profcb100.*scalecb.^2;
+    stackdat.psfcov.profpspsf100 = psfdatall.comb(im).datcov.profps100.*scaleps.^2;    
      %% tot cov
     stackdat.cov.cb = stackdat.datcov.profcbg + ...
         stackdat.bgcov.profcbg + stackdat.psfcov.profcbpsf;
