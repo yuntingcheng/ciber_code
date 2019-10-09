@@ -38,6 +38,7 @@ psmap = stackmapdat(ifield).psmap;
 m_min_arr = 16:19;
 m_max_arr = 17:20;
 Njack = 50;
+Nbg = 100;
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 %%
@@ -108,7 +109,7 @@ for im= 1:numel(m_min_arr)
         stackdat.bgsub(isub).profpsg = profps;
 
         fprintf('stack %s BG, %d<m<%d, %d gals, isub %d\n',...
-            dt.name,m_min,m_max,srcdat.Ng,isub);
+            dt.name,m_min,m_max,srcdat.sub(isub).Ng,isub);
     end
     %% profile combining all subset
     profcbg = zeros(size(r_arr));
@@ -195,7 +196,55 @@ for im= 1:numel(m_min_arr)
         stackdat.bgjack(isub).profpsg100 = prof100;        
         
     end   
+    %% stack Nbg of BG with Ng random positions
+    r_arr = stackdat.r_arr;
+    rsub_arr = stackdat.rsub_arr;
+    profcbg_arr = zeros([Nbg,numel(r_arr)]);
+    profpsg_arr = zeros([Nbg,numel(r_arr)]);
+    profcbgsub_arr = zeros([Nbg,numel(rsub_arr)]);
+    profpsgsub_arr = zeros([Nbg,numel(rsub_arr)]);
+    profcbg100_arr = zeros([Nbg,1]);
+    profpsg100_arr = zeros([Nbg,1]);
+    for isim=1:Nbg
+        [profcb,profps,hitmap]=stackihl_ps0_hist_map_bk...
+            (dx,cbmap,psmap,mask_inst,strmask,[srcdat.Ng-1,srcdat.Ng],...
+            verbose,false);
+        
+        % interpolate missing data
+        profcb = profcb(2,:);
+        sp = find(profcb==profcb);
+        profcb = spline(r_arr(sp),profcb(sp),r_arr);
+        profcbg_arr(isim,:) = profcb;
+        
+        profps = profps(2,:);
+        sp = find(profps==profps);
+        profps = spline(r_arr(sp),profps(sp),r_arr);
+        profpsg_arr(isim,:) = profps;
+        
+        [prof15,prof100] = profile_radial_binning(profcb,hitmap,sp100);
+        profcbgsub_arr(isim,:) = prof15;
+        profcbg100_arr(isim) = prof100;
+
+        [prof15,prof100] = profile_radial_binning(profps,hitmap,sp100);
+        profpsgsub_arr(isim,:) = prof15;
+        profpsg100_arr(isim) = prof100;
+        
+        fprintf('stack %s, %d<m<%d, %d gals, isim %d\n',...
+            dt.name,m_min,m_max,srcdat.Ng,isim);
+    end
+    stackdat.bg.profcbg = mean(profcbg_arr);
+    stackdat.bg.profpsg = mean(profpsg_arr);
+    stackdat.bg.profcbgsub = mean(profcbgsub_arr);
+    stackdat.bg.profpsgsub = mean(profpsgsub_arr);
+    stackdat.bg.profcbg100 = mean(profcbg100_arr);
+    stackdat.bg.profpsg100 = mean(profpsg100_arr);
     
+    stackdat.bgcov.covcb = get_cov_matrix(profcbg_arr);
+    stackdat.bgcov.covps = get_cov_matrix(profpsg_arr);
+    stackdat.bgcov.covcbsub = get_cov_matrix(profcbgsub_arr);
+    stackdat.bgcov.covpssub = get_cov_matrix(profpsgsub_arr);
+    stackdat.bgcov.covcb100 = get_cov_matrix(profcbg100_arr);
+    stackdat.bgcov.covps100 = get_cov_matrix(profpsg100_arr);
     %% save data  
     stackdatall(im).stackdat = stackdat;
     if masklim

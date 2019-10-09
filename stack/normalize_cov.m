@@ -6,7 +6,11 @@ N = size(cov,1);
 cov_rho = cov;
 for i=1:N
     for j=1:N
-        cov_rho(i,j) = cov(i,j)./sqrt(cov(i,i)*cov(j,j));
+        if cov(i,i)==0 | cov(j,j)==0
+            cov_rho(i,j) = cov(i,j);
+        else
+            cov_rho(i,j) = cov(i,j)./sqrt(cov(i,i)*cov(j,j));
+        end
     end
 end
 

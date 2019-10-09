@@ -2,10 +2,10 @@ function hscclusdat = get_hsc_clus_prof(flight, inst, masklim, weight)
 
 mypaths=get_paths(flight);
 
-load(sprintf('%s/TM%d/psfdat',mypaths.alldat,inst),'psfdatallfields');
-r_arr = psfdatallfields(8).psf(1).r_arr;
+load(sprintf('%s/TM%d/psfdat_SWIRE',mypaths.alldat,inst),'psfdatall');
+r_arr = psfdatall.comb(1).r_arr;
 for im=1:4
-    psf_arr = psfdatallfields(8).psf(im).psfps;
+    psf_arr = psfdatall.comb(im).all.profps;
     excb_all = zeros([12,numel(r_arr)]);
     excb_err_all = zeros([12,numel(r_arr)]);
     for hsc_idx=0:11

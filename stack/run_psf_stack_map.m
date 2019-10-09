@@ -147,7 +147,7 @@ end
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
 
-%% combine the profile and get Cov
+%% combine the profile
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 load(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
@@ -249,66 +249,6 @@ for isub=1:Njack
     
 end
 
-%%% combined PSF Cov from jackknife%%%%
-dat_profcb = zeros([Njack,numel(r_arr)]);
-dat_profps = zeros([Njack,numel(r_arr)]);
-dat_profcbsub = zeros([Njack,numel(rsub_arr)]);
-dat_profpssub = zeros([Njack,numel(rsub_arr)]);
-dat_profcb100 = zeros([1,Njack]);
-dat_profps100 = zeros([1,Njack]);
-    
-for isub=1:Njack
-    dat_profcb(isub,:) = psfdatall.comb(im).jack(isub).profcb;
-    dat_profps(isub,:) = psfdatall.comb(im).jack(isub).profps;
-    dat_profcbsub(isub,:) = psfdatall.comb(im).jack(isub).profcbsub;
-    dat_profpssub(isub,:) = psfdatall.comb(im).jack(isub).profpssub;
-    dat_profcb100(isub) = psfdatall.comb(im).jack(isub).profcb100;
-    dat_profps100(isub) = psfdatall.comb(im).jack(isub).profps100;
-end
-    
-covcb = zeros(numel(r_arr));
-covps = zeros(numel(r_arr));
-for isub=1:numel(r_arr)
-    for jsub=1:numel(r_arr)
-        dati = dat_profcb(:,isub);
-        datj = dat_profcb(:,jsub);
-        covcb(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
-        dati = dat_profps(:,isub);
-        datj = dat_profps(:,jsub);
-        covps(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
-    end
-end
-    
-covcbsub = zeros(numel(rsub_arr));
-covpssub = zeros(numel(rsub_arr));    
-for isub=1:numel(rsub_arr)
-    for jsub=1:numel(rsub_arr)
-        dati = dat_profcbsub(:,isub);
-        datj = dat_profcbsub(:,jsub);
-        covcbsub(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
-        dati = dat_profpssub(:,isub);
-        datj = dat_profpssub(:,jsub);
-        covpssub(isub,jsub) = mean(dati.*datj) - mean(dati)*mean(datj);
-    end
-end
-
-errcb100 = mean(dat_profcb100.^2) - mean(dat_profcb100)^2;
-errps100 = mean(dat_profps100.^2) - mean(dat_profps100)^2;
-    
-psfdatall.comb(im).datcov.profcb = covcb.*(Njack-1);
-psfdatall.comb(im).datcov.profps = covps.*(Njack-1);
-psfdatall.comb(im).datcov.profcb_rho = ...
-    normalize_cov(psfdatall.comb(im).datcov.profcb);
-psfdatall.comb(im).datcov.profps_rho = ...
-    normalize_cov(psfdatall.comb(im).datcov.profps);
-psfdatall.comb(im).datcov.profcbsub = covcbsub.*(Njack-1);
-psfdatall.comb(im).datcov.profpssub = covpssub.*(Njack-1);
-psfdatall.comb(im).datcov.profcbsub_rho = ...
-    normalize_cov(psfdatall.comb(im).datcov.profcbsub);
-psfdatall.comb(im).datcov.profpssub_rho = ...
-    normalize_cov(psfdatall.comb(im).datcov.profpssub);
-psfdatall.comb(im).datcov.profcb100 = errcb100.*(Njack-1);
-psfdatall.comb(im).datcov.profps100 = errps100.*(Njack-1);
 end
 
 save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
