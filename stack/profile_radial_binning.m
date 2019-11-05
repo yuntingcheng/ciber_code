@@ -9,3 +9,4 @@ function [prof15,prof100] = profile_radial_binning(prof25,w,sp100)
     
     prof100 = sum(prof25(sp100).*w(sp100))./sum(w(sp100));
 return
+[]
