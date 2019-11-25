@@ -40,7 +40,8 @@ for ifield=4:8
     
     %%% masks %%%
     mask_inst = stackmapdat(ifield).mask;
-    strmask = maskdat.mask(ifield).strmask_stack;
+    % strmask = maskdat.mask(ifield).strmask_stack;
+    strmask = maskdat.mask(ifield).m_max(20).strmask_stack;
     if rmin==2
         strmask = maskdat.mask(ifield).strmask_stack_rmin2;       
     end
@@ -48,12 +49,6 @@ for ifield=4:8
     totmask = mask_inst.*strmask;
 
     %%% sigma clip and mean/grad sub %%%
-%     sigmask1 = sigclip_mask(cbmap_raw,totmask,3,5);
-%     sigmask1 = sigclip_mask(psmap_raw,sigmask1,3,5);
-%     sm = fillpadsmooth(cbmap_raw,sigmask1,2);
-%     sigmask2 = sigclip_mask(sm,sigmask1,3,5);
-%     sm = fillpadsmooth(psmap_raw,sigmask2,2);
-%     sigmask = sigclip_mask(sm,sigmask2,3,5);
     Q1 = quantile(cbmap_raw(find(totmask)),0.25);
     Q3 = quantile(cbmap_raw(find(totmask)),0.75);
     IQR = Q3-Q1;
@@ -111,8 +106,12 @@ for ifield=4:8
         stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask_stack_rmin2;
         stackmapdat(ifield).strnum = maskdat.mask(ifield).strnum_stack_rmin2;
     elseif isnan(rmin)
-        stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask_stack;
-        stackmapdat(ifield).strnum = maskdat.mask(ifield).strnum_stack;
+        % stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask_stack;
+        % stackmapdat(ifield).strnum = maskdat.mask(ifield).strnum_stack;
+        stackmapdat(ifield).strmask = maskdat.mask(ifield).m_max(20).strmask_stack;
+        stackmapdat(ifield).strnum = maskdat.mask(ifield).m_max(20).strnum_stack;
+
+        
     end
     stackmapdat(ifield).psmap_FFerr = psmap + sm;
     stackmapdat(ifield).m_min_arr = m_min_arr;
