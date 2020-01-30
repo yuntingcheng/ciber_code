@@ -22,9 +22,10 @@ frac1=numel(b)/numel(maskmap);
   
 %  b = b(b < nanmedian(b(:))+5*std(b(:)) ...
 %     & b > nanmedian(b(:))-5*std(b(:)));
-  
-mask=maskmap<max(b) & maskmap>min(b);
-mask=double(mask);
+
+mask = ones(size(maskmap));
+mask(find(maskmap==0))=0;
+mask(find((maskmap>max(b) | (maskmap<min(b)))))=0;
 clipmax=max(b);clipmin=min(b);
 b1=b(~~b);
 frac2=numel(b1)/1024.^2;

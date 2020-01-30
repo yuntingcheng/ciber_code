@@ -94,11 +94,11 @@ if ~HSC
     centnum_map2 = zeros(1024);
     for i=1:numel(x1round_arr)
         centnum_map1(x1round_arr(i),y1round_arr(i))=...
-            centnum_map1(x1round_arr(i),y2round_arr(i))+1;
+            centnum_map1(x1round_arr(i),y1round_arr(i))+1;
     end
     for i=1:numel(x2round_arr)
         centnum_map2(x2round_arr(i),y2round_arr(i))=...
-            centnum_map2(x1round_arr(i),y2round_arr(i))+1;
+            centnum_map2(x2round_arr(i),y2round_arr(i))+1;
     end
     
     spg=find(m_arr<=m_max & m_arr>m_min & cls_arr==1 & photz_arr >= 0);

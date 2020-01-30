@@ -1,18 +1,4 @@
-function stack_preprocess(flight,inst,varargin)
-  p = inputParser;
-  
-  p.addRequired('flight',@isnumeric);
-  p.addRequired('inst',@isnumeric);
-  p.addOptional('rmin',nan,@isnumeric);
-  
-  p.parse(flight,inst,varargin{:});
-
-  flight   = p.Results.flight;
-  inst     = p.Results.inst;
-  rmin     = p.Results.rmin;
-  
-  clear p varargin;
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function stack_preprocess(flight,inst)
 
 mypaths=get_paths(flight);
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
@@ -29,10 +15,7 @@ for ifield=4:8
 
     dt=get_dark_times(flight,inst,ifield);
     cbmap_raw = stackmapdat(ifield).map * cal(ifield).apf2nWpm2ps;
-    if ifield == 5
-        cbmap_raw = stackmapdat(ifield).map_last10 * cal(ifield).apf2nWpm2ps;
-    end
-    
+
     %%%%% PanSTARRS srcmap %%%%%%%
     srcmapdir = strcat(mypaths.ciberdir,'doc/20170617_Stacking/srcmaps/TM',...
         num2str(inst),'/');
@@ -40,14 +23,10 @@ for ifield=4:8
     
     %%% masks %%%
     mask_inst = stackmapdat(ifield).mask;
-    % strmask = maskdat.mask(ifield).strmask_stack;
-    strmask = maskdat.mask(ifield).m_max(20).strmask_stack;
-    if rmin==2
-        strmask = maskdat.mask(ifield).strmask_stack_rmin2;       
-    end
-    
+    strmask = maskdat.mask(ifield).m_max(20).strmask_stack;    
     totmask = mask_inst.*strmask;
-
+    N1 = sum(totmask(:));%%%
+    
     %%% sigma clip and mean/grad sub %%%
     Q1 = quantile(cbmap_raw(find(totmask)),0.25);
     Q3 = quantile(cbmap_raw(find(totmask)),0.75);
@@ -97,22 +76,14 @@ for ifield=4:8
     
     %%% get smoothed FF err %%%
     sm = fillpadsmooth(cbmap,mask_inst_clip.*strmask,50);
-    
+    N2 = sum(mask_inst_clip(:).*strmask(:));
+    sprintf('%.4f,%.4f',N1/1024^2*100,N2/1024^2*100)
     %%% write the data %%%
     stackmapdat(ifield).cbmap = cbmap;
     stackmapdat(ifield).psmap = psmap;
     stackmapdat(ifield).mask_inst_clip = mask_inst_clip;
-    if rmin==2
-        stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask_stack_rmin2;
-        stackmapdat(ifield).strnum = maskdat.mask(ifield).strnum_stack_rmin2;
-    elseif isnan(rmin)
-        % stackmapdat(ifield).strmask = maskdat.mask(ifield).strmask_stack;
-        % stackmapdat(ifield).strnum = maskdat.mask(ifield).strnum_stack;
-        stackmapdat(ifield).strmask = maskdat.mask(ifield).m_max(20).strmask_stack;
-        stackmapdat(ifield).strnum = maskdat.mask(ifield).m_max(20).strnum_stack;
-
-        
-    end
+    stackmapdat(ifield).strmask = maskdat.mask(ifield).m_max(20).strmask_stack;
+    stackmapdat(ifield).strnum = maskdat.mask(ifield).m_max(20).strnum_stack;
     stackmapdat(ifield).psmap_FFerr = psmap + sm;
     stackmapdat(ifield).m_min_arr = m_min_arr;
     stackmapdat(ifield).m_max_arr = m_max_arr;
@@ -139,11 +110,25 @@ for ifield=4:8
 end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-if rmin==2
-    save(sprintf('%s/stackmapdat_rmin2',savedir),'stackmapdat');
-elseif isnan(rmin)
-    save(sprintf('%s/stackmapdat',savedir),'stackmapdat');
+save(sprintf('%s/stackmapdat',savedir),'stackmapdat');
+
+
+data = zeros([5,11,1024,1024]);
+for ifield=4:8
+    data(ifield-3,1,:,:) = stackmapdat(ifield).rawmap;
+    data(ifield-3,2,:,:) = stackmapdat(ifield).mask;
+    data(ifield-3,3,:,:) = stackmapdat(ifield).DCsubmap;
+    data(ifield-3,4,:,:) = stackmapdat(ifield).FF;
+    data(ifield-3,5,:,:) = stackmapdat(ifield).FFunholy;
+    data(ifield-3,6,:,:) = stackmapdat(ifield).map;
+    data(ifield-3,7,:,:) = stackmapdat(ifield).cbmap;
+    data(ifield-3,8,:,:) = stackmapdat(ifield).psmap;
+    data(ifield-3,9,:,:) = stackmapdat(ifield).mask_inst_clip;
+    data(ifield-3,10,:,:) = stackmapdat(ifield).strmask;
+    data(ifield-3,11,:,:) = stackmapdat(ifield).strnum; 
 end
+save(sprintf('%s/stackmapdatarr',savedir),'data');
+
 
 return
 

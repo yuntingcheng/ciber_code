@@ -2,18 +2,22 @@ function get_linearized_map(flight,inst)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % get linearized mask for stacking
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
 mypaths=get_paths(flight);
 
 loaddir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
-load(strcat(loaddir,'FFdat'),'FFdat');
 load(strcat(loaddir,'maskdat'),'maskdat');
-
 mask_inst = maskdat.mask(4).mask_inst;
 
+DCdir= strcat(mypaths.ciberdir, 'doc/20160808_DarkProcess/40030/');
+load(strcat(DCdir,'band',num2str(inst),'_DCtemplate'),'DCtemplate');
+
+%%% line fit, linearization
 for ifield=4:8
     dt=get_dark_times(flight,inst,ifield);
     [fr] = get_data_frames(inst,dt.name,'flight',flight,'verbose',0);
     fr=fr(3:end,:,:);
+    stackmapdat(ifield).nfr = size(fr,1);
     
     %%% mask pixel having crazy time stream
     dfr=fr(2:end,:,:)-fr(1:end-1,:,:);
@@ -40,7 +44,6 @@ for ifield=4:8
             shitmask(cc,rr)=0;
             count3=count3+1;
         end
-        %plot(fixfr(:,cc,rr) - fixfr(1,cc,rr));%%%%
     end
     end
     mask=mask_inst.*shitmask;
@@ -48,40 +51,64 @@ for ifield=4:8
     %%% line fit
     [long,off] = linfit_map(fixfr,'verbose',0);
     [short] = linfit_map(fixfr(1:4,:,:),'verbose',0);
+    stackmapdat(ifield).rawmap = long;
 
-    longcal = long./FFdat(ifield).FFunholy;
-    shortcal = short./FFdat(ifield).FFunholy;
-
+    %%% mask negative flux pixel (positive ADU/fr)
+    negmask=ones(1024);
+    negmask(find(long>0))=0;
+    mask = mask.*negmask;
+    stackmapdat(ifield).mask = mask;
+    
     %%% replace saturated pixel with short line fit
     qq= squeeze(fixfr(end,:,:));
-    qqs = qq -off;
+    qqs = qq - off;
     sp = find(qqs < -5000);
-    fixmap = longcal;
-    fixmap(sp) = shortcal(sp);
-    
-    %%% for elat30, make another map only last 10 frames
+    fixmap = long;
+    fixmap(sp) = short(sp);
+
+    stackmapdat(ifield).DCsubmap = fixmap - DCtemplate;
+    %%% for elat30, make another map w/ only last 10 frames
     % since elat30 field integration is very unstable in ~ first half
     if ifield == 5
         fixfr = fixfr(end-9:end,:,:);
         [long1,off1] = linfit_map(fixfr,'verbose',0);
         [short1] = linfit_map(fixfr(1:4,:,:),'verbose',0);
 
-        longcal1 = long1./FFdat(ifield).FFunholy;
-        shortcal1 = short1./FFdat(ifield).FFunholy;
-
         qq= squeeze(fixfr(end,:,:));
         qqs = qq -off1;
         sp = find(qqs < -2000);
-        fixmap1 = longcal1;
-        fixmap1(sp) = shortcal1(sp);
+        fixmap1 = long1;
+        fixmap1(sp) = short1(sp);
+        stackmapdat(ifield).DCsubmap = fixmap1 - DCtemplate;
     end
-    
-    %%% mask negative flux pixel (positive ADU/fr)
-    negmask=ones(1024);
-    negmask(find(fixmap>0))=0;
-    mask = mask.*negmask;
+end
 
-    %%% hand mask bad pixels
+%%% FF correction
+for ifield = 4:8
+    FF = zeros(1024);stack_mask=zeros(1024);
+    for jfield = 4:8
+        if jfield ~= ifield
+            map = -stackmapdat(jfield).DCsubmap;
+            strmask = maskdat.mask(jfield).strmask_stack;
+            mask0 = strmask.*stackmapdat(jfield).mask;
+            [mask,~,~,~,~]=sigma_clip(map.*mask0,5,3);
+            meanmap = mean(map(find(mask)));
+            FF=FF+(map.*mask./sqrt(meanmap));
+            stack_mask=stack_mask+mask.*sqrt(meanmap);
+        end
+    end
+    FF=FF./stack_mask;FF((find(FF~=FF)))=0;
+    stackmapdat(ifield).FF = FF;
+    
+    FFmask=ones(1024);FFmask(find(FF==0))=0;
+    FFunholy = unholy_map(FF,FFmask,200);
+    stackmapdat(ifield).FFunholy = FFunholy;
+    stackmapdat(ifield).map = stackmapdat(ifield).rawmap./FFunholy;
+end
+
+%%% hand mask
+for ifield=4:8
+    mask = stackmapdat(ifield).mask;
     if inst==1 & ifield==8
         mask=circular_mask(442,40,40,mask);
         mask=circular_mask(742,342,10,mask);
@@ -96,15 +123,7 @@ for ifield=4:8
         mask=elliptical_mask(215,220,60,15,80,mask);
         mask=elliptical_mask(710,90,80,20,60,mask);
     end
-    
-    stackmapdat(ifield).rawmap = long;
-    stackmapdat(ifield).map = fixmap;
     stackmapdat(ifield).mask = mask;
-    if ifield == 5
-        stackmapdat(ifield).rawmap_last10 = long1;
-        stackmapdat(ifield).map_last10 = fixmap1;
-    end
-    
 end
 
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');

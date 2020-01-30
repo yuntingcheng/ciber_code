@@ -298,6 +298,9 @@ print(savename,'-dpng');close
 end
 end
 %% plot PSF of all fields
+flight = 40030;
+mypaths=get_paths(flight);
+
 for inst=[1,2]
 figure
 leg = {};
@@ -322,5 +325,5 @@ title(sprintf('%s band',bandname(inst)),'fontsize',15);
 
 pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
 savename = sprintf('%s/psf',pltsavedir);
-print(savename,'-dpng');close
+% print(savename,'-dpng');close
 end

@@ -110,12 +110,12 @@ excessdat.psfcov.covps = covps;
 excessdat.psfcov.covpssub = get_cov_matrix(dat_profpssub).*(Njack-1);
 excessdat.psfcov.covps100 = get_cov_matrix(dat_profps100).*(Njack-1);
 
-excessdat.bgcov.covcb = stackdat.bgcov.profcbg;
-excessdat.bgcov.covcbsub = stackdat.bgcov.profcbgsub;
-excessdat.bgcov.covcb100 = stackdat.bgcov.profcbg100;
-excessdat.bgcov.covps = stackdat.bgcov.profpsg;
-excessdat.bgcov.covpssub = stackdat.bgcov.profpsgsub;
-excessdat.bgcov.covps100 = stackdat.bgcov.profpsg100;
+excessdat.bgcov.covcb = stackdat.bgcov.covcb;
+excessdat.bgcov.covcbsub = stackdat.bgcov.covcbsub;
+excessdat.bgcov.covcb100 = stackdat.bgcov.covcb100;
+excessdat.bgcov.covps = stackdat.bgcov.covps;
+excessdat.bgcov.covpssub = stackdat.bgcov.covpssub;
+excessdat.bgcov.covps100 = stackdat.bgcov.covps100;
 
 excessdat.excov.covcb = excessdat.datcov.covcb + ...
     excessdat.bgcov.covcb + excessdat.psfcov.covcb;

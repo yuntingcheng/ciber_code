@@ -88,13 +88,16 @@ if type == 2
 end
 
 subm_arr=m_arr(sp);
+submI_arr=mI_arr(sp);
 subx_arr=x_arr(sp);
 suby_arr=y_arr(sp);
 
 if isnan(rmin)
-    rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith);
+%     rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith);
+    rad_arr = get_mask_radius_th(1,ifield,submI_arr,Ith);
 else
-    rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith,'rmin',rmin);
+%     rad_arr = get_mask_radius_th(inst,ifield,subm_arr,Ith,'rmin',rmin);
+    rad_arr = get_mask_radius_th(1,ifield,submI_arr,Ith,'rmin',rmin);
 end
 
 mask = ones(1024);

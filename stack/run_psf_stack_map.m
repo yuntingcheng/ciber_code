@@ -36,6 +36,7 @@ m_max_arr = [9,10,11,12,13,14,16,17:20];
 cbmap = stackmapdat(ifield).cbmap;
 psmap = stackmapdat(ifield).psmap;
 %%
+%{
 for im= 1:numel(m_min_arr)
 
     m_min = m_min_arr(im);
@@ -146,6 +147,7 @@ for im= 1:numel(m_min_arr)
 end
 savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
 save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
+%}
 
 %% combine the profile
 
@@ -165,92 +167,208 @@ end
 [~,im_out] = max(sum(snrs'));
 
 for im=1:4
+    im_in = im + 7;
+    im_mid = 6;
+    psfdatall.comb(im).r_arr = r_arr;
+    psfdatall.comb(im).im_in = im_in;
+    psfdatall.comb(im).im_mid = im_mid;
+    psfdatall.comb(im).im_out = im_out;
 
-im_in = im + 7;
-im_mid = 6;
-psfdatall.comb(im).r_arr = r_arr;
-psfdatall.comb(im).im_in = im_in;
-psfdatall.comb(im).im_mid = im_mid;
-psfdatall.comb(im).im_out = im_out;
+    psfdatin = psfdatall.mag(im_in).psfdat;
+    psfdatmid = psfdatall.mag(im_mid).psfdat;
+    psfdatout = psfdatall.mag(im_out).psfdat;
 
-psfdatin = psfdatall.mag(im_in).psfdat;
-psfdatmid = psfdatall.mag(im_mid).psfdat;
-psfdatout = psfdatall.mag(im_out).psfdat;
+    %%% combined PSF %%%%
+    hit = psfdatin.all.profhits;
+    hit(9:11) = psfdatmid.all.profhits(9:11);
+    hit(11:end) = psfdatout.all.profhits(11:end);
 
-%%% combined PSF %%%%
-hit = psfdatin.all.profhits;
-hit(9:11) = psfdatmid.all.profhits(9:11);
-hit(11:end) = psfdatmid.all.profhits(11:end);
-
-psfin = psfdatin.all.profcbs;
-psfmid = psfdatmid.all.profcbs;
-psfout = psfdatout.all.profcbs;
-psfin = psfin./psfin(1);
-psfmid = psfmid./psfmid(9).*psfin(9);
-psfout = psfout./psfout(11).*psfmid(11);
-psfcomb = psfin;
-psfcomb(9:11) = psfmid(9:11);
-psfcomb(11:end) = psfout(11:end);
-[prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
-psfdatall.comb(im).all.profcb = psfcomb;
-psfdatall.comb(im).all.profcbsub = prof15;
-psfdatall.comb(im).all.profcb100 = prof100;
-
-psfin = psfdatin.all.profpss;
-psfmid = psfdatmid.all.profpss;
-psfout = psfdatout.all.profpss;
-psfin = psfin./psfin(1);
-psfmid = psfmid./psfmid(9).*psfin(9);
-psfout = psfout./psfout(11).*psfmid(11);
-psfcomb = psfin;
-psfcomb(9:11) = psfmid(9:11);
-psfcomb(11:end) = psfout(11:end);
-[prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
-psfdatall.comb(im).all.profps = psfcomb;
-psfdatall.comb(im).all.profpssub = prof15;
-psfdatall.comb(im).all.profps100 = prof100;
-
-psfdatall.comb(im).rsub_arr = rsub_arr;
-psfdatall.comb(im).r100 = r100;
-
-%%% combined PSF jackknife%%%%
-for isub=1:Njack
-    hit = psfdatin.jack(isub).profhits;
-    hit(9:11) = psfdatmid.jack(isub).profhits(9:11);
-    hit(11:end) = psfdatmid.jack(isub).profhits(11:end);
-
-    psfin = psfdatin.jack(isub).profcbs;
-    psfmid = psfdatmid.jack(isub).profcbs;
-    psfout = psfdatout.jack(isub).profcbs;
-    psfin = psfin./psfin(1);
-    psfmid = psfmid./psfmid(9).*psfin(9);
-    psfout = psfout./psfout(11).*psfmid(11);
+    psfin0 = psfdatin.all.profcbs;
+    psfmid0 = psfdatmid.all.profcbs;
+    psfout0 = psfdatout.all.profcbs;
+    normcbin = 1./psfin0(1);
+    psfin = psfin0.*normcbin;
+    normcbmid = normcbin./psfmid0(9).*psfin0(9);
+    psfmid = psfmid0.*normcbmid;
+    normcbout = normcbmid./psfout0(11).*psfmid0(11);
+    psfout = psfout0.*normcbout;
     psfcomb = psfin;
     psfcomb(9:11) = psfmid(9:11);
     psfcomb(11:end) = psfout(11:end);
     [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
-    psfdatall.comb(im).jack(isub).profcb = psfcomb;
-    psfdatall.comb(im).jack(isub).profcbsub = prof15;
-    psfdatall.comb(im).jack(isub).profcb100 = prof100;
-    
-    psfin = psfdatin.jack(isub).profpss;
-    psfmid = psfdatmid.jack(isub).profpss;
-    psfout = psfdatout.jack(isub).profpss;
-    psfin = psfin./psfin(1);
-    psfmid = psfmid./psfmid(9).*psfin(9);
-    psfout = psfout./psfout(11).*psfmid(11);
+    psfdatall.comb(im).all.profcb = psfcomb;
+    psfdatall.comb(im).all.profcbsub = prof15;
+    psfdatall.comb(im).all.profcb100 = prof100;
+
+    psfin0 = psfdatin.all.profpss;
+    psfmid0 = psfdatmid.all.profpss;
+    psfout0 = psfdatout.all.profpss;
+    normpsin = 1./psfin0(1);
+    psfin = psfin0.*normpsin;
+    normpsmid = normpsin./psfmid0(9).*psfin0(9);
+    psfmid = psfmid0.*normpsmid;
+    normpsout = normpsmid./psfout0(11).*psfmid0(11);
+    psfout = psfout0.*normpsout;
     psfcomb = psfin;
     psfcomb(9:11) = psfmid(9:11);
     psfcomb(11:end) = psfout(11:end);
     [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
-    psfdatall.comb(im).jack(isub).profps = psfcomb;
-    psfdatall.comb(im).jack(isub).profpssub = prof15;
-    psfdatall.comb(im).jack(isub).profps100 = prof100;
-    
-end
+    psfdatall.comb(im).all.profps = psfcomb;
+    psfdatall.comb(im).all.profpssub = prof15;
+    psfdatall.comb(im).all.profps100 = prof100;
 
+    psfdatall.comb(im).rsub_arr = rsub_arr;
+    psfdatall.comb(im).r100 = r100;
+
+    %%% combined PSF jackknife%%%%
+    for isub=1:Njack
+        hit = psfdatin.jack(isub).profhits;
+        hit(9:11) = psfdatmid.jack(isub).profhits(9:11);
+        hit(11:end) = psfdatout.jack(isub).profhits(11:end);
+
+        psfin0 = psfdatin.jack(isub).profcbs;
+        psfmid0 = psfdatmid.jack(isub).profcbs;
+        psfout0 = psfdatout.jack(isub).profcbs;
+        psfin = psfin0.*normcbin;
+        psfmid = psfmid0.*normcbmid;
+        psfout = psfout0.*normcbout;
+        psfcomb = psfin;
+        psfcomb(9:11) = psfmid(9:11);
+        psfcomb(11:end) = psfout(11:end);
+        [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+        psfdatall.comb(im).jack(isub).profcb = psfcomb;
+        psfdatall.comb(im).jack(isub).profcbsub = prof15;
+        psfdatall.comb(im).jack(isub).profcb100 = prof100;
+
+        psfin0 = psfdatin.jack(isub).profpss;
+        psfmid0 = psfdatmid.jack(isub).profpss;
+        psfout0 = psfdatout.jack(isub).profpss;
+        psfin = psfin0.*normpsin;
+        psfmid = psfmid0.*normpsmid;
+        psfout = psfout0.*normpsout;
+        psfcomb = psfin;
+        psfcomb(9:11) = psfmid(9:11);
+        psfcomb(11:end) = psfout(11:end);
+        [prof15,prof100] = profile_radial_binning(psfcomb,hit,sp100);
+        psfdatall.comb(im).jack(isub).profps = psfcomb;
+        psfdatall.comb(im).jack(isub).profpssub = prof15;
+        psfdatall.comb(im).jack(isub).profps100 = prof100;
+    end
 end
 
 save(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
 
 return
+
+
+%% make the plots
+
+flight = 40030;
+inst = 2;
+mypaths=get_paths(flight);
+m_min_arr = [4,4,4,4,12,13,15,16:19];
+m_max_arr = [9,10,11,12,13,14,16,17:20];
+Njack = 50;
+bandname = ['I','H'];
+pltsavedir=(strcat(mypaths.alldat,'plots/TM',num2str(inst),'/'));
+
+
+for ifield = 4:8
+
+    dt=get_dark_times(flight,inst,ifield);
+    savedir=strcat(mypaths.alldat,'TM',num2str(inst),'/');
+    load(sprintf('%s/psfdat_%s',savedir,dt.name),'psfdatall');
+
+    figure
+    setwinsize(gcf, 1500, 300)
+
+    subplot(1,2,1)
+    for im= 1:numel(m_min_arr)
+        off = 0.92 + im*0.02;
+        psfdat = psfdatall.mag(im).psfdat;
+        r_arr = psfdat.r_arr;
+        loglog(r_arr.*off, psfdat.all.profcbs,'.-','color',get_color(im),...
+        'DisplayName',sprintf('%d < m_J < %d (%d sources)', ...
+        psfdat.m_min, psfdat.m_max, psfdat.all.counts));hold on
+    end
+    vline(r_arr(9),'k--');
+    vline(r_arr(11),'k--');
+    h=legend('show','Location','northeast');
+    set(h,'fontsize',6)
+    legend boxoff
+    grid on
+    xlim([4e-1,1.1e3])
+    ylim([1e-2,1.1e6])
+    xlabel('r [arcsec]', 'fontsize',15)
+    ylabel('I [nW/m^2/sr]', 'fontsize',15)
+    title(sprintf('%s band %s star stack',...
+        bandname(inst),dt.name),'fontsize',15);
+
+    for im= 1:numel(m_min_arr)
+        off = 0.92 + im*0.02;
+        psfdat = psfdatall.mag(im).psfdat;
+        loglog(r_arr.*off, -psfdat.all.profcbs,'o','color',get_color(im));
+        errorbar(r_arr.*off, psfdat.all.profcbs, psfdat.errjack.profcbs, ...
+            '.','color',get_color(im));
+        errorbar(r_arr.*off, -psfdat.all.profcbs, psfdat.errjack.profcbs,...
+            'o','color',get_color(im));
+    end
+
+
+    subplot(1,2,2)
+    for im=1:4
+        xoff = 0.95 + im*0.02;
+        yoff = 3^-(im-1);
+        psfdat = psfdatall.comb(im);
+        r_arr = psfdat.r_arr;
+        p = psfdat.all.profcb;
+        im_in = psfdat.im_in;
+        im_mid = psfdat.im_mid;
+        im_out = psfdat.im_out;
+        dat_profcb = zeros([Njack,numel(r_arr)]);
+        for isub=1:Njack
+            dat_profcb(isub,:) = psfdat.jack(isub).profcb;
+        end
+        covcb = get_cov_matrix(dat_profcb).*(Njack-1);
+        e = sqrt(diag(covcb)');
+
+        loglog(r_arr(1:9).*xoff, p(1:9).*yoff,...
+            '.-','color',get_color(im_in));hold on
+        loglog(r_arr(1:9).*xoff, -p(1:9).*yoff,...
+            'o','color',get_color(im_in));
+        errorbar(r_arr(1:9).*xoff, p(1:9).*yoff, e(1:9).*yoff, ...
+            '.','color',get_color(im_in));
+        errorbar(r_arr(1:9).*xoff, -p(1:9).*yoff, e(1:9).*yoff,...
+            'o','color',get_color(im_in));
+
+
+        loglog(r_arr(9:11).*xoff, p(9:11).*yoff,...
+            '.-','color',get_color(im_mid));hold on
+        loglog(r_arr(9:11).*xoff, -p(9:11).*yoff,...
+            'o','color',get_color(im_mid));
+        errorbar(r_arr(9:11).*xoff, p(9:11).*yoff, e(9:11).*yoff, ...
+            '.','color',get_color(im_mid));
+        errorbar(r_arr(9:11).*xoff, -p(9:11).*yoff, e(9:11).*yoff,...
+            'o','color',get_color(im_mid));
+
+        loglog(r_arr(11:end).*xoff, p(11:end).*yoff,...
+            '.-','color',get_color(im_out));hold on
+        loglog(r_arr(11:end).*xoff, -p(11:end).*yoff,...
+            'o','color',get_color(im_out));
+        errorbar(r_arr(11:end).*xoff, p(11:end).*yoff, e(11:end).*yoff, ...
+            '.','color',get_color(im_out));
+        errorbar(r_arr(11:end).*xoff, -p(11:end).*yoff, e(11:end).*yoff,...
+            'o','color',get_color(im_out));
+    end
+    ylim([3e-7,1.1])
+    xlim([4e-1,1.1e3])
+    grid on
+    xlabel('r [arcsec]', 'fontsize',15)
+    ylabel('PSF', 'fontsize',15)
+    title(sprintf('%s band %s PSF model',...
+        bandname(inst),dt.name),'fontsize',15);
+    
+savename = sprintf('%s/%s_psf',pltsavedir,dt.name);
+% print(savename,'-dpng');close
+%%
+end

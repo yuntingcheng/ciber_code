@@ -1,4 +1,3 @@
-%{
 flight = 40030;
 inst = 2;
 if inst==1
@@ -37,9 +36,9 @@ for m_max=[18,19,20]
     strmask1 = maskdat.mask(ifield).m_max(m_max-1).strmask_stack;
     strnum1 = maskdat.mask(ifield).m_max(m_max-1).strnum_stack;
     fprintf('ifield %d m_max = %d\n',ifield,m_max);
-    [tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,m_max-1,m_max,Ith,...
+    [tmmask,tmnum] = make_mask_2m(flight,inst,ifield,m_max-1,m_max,Ith,...
         'PSmatch',1,'verbose',false);
-    [psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,m_max-1,m_max,Ith,...
+    [psmask,psnum] = make_mask_ps(flight,inst,ifield,0,m_max-1,m_max,Ith,...
         'verbose',false);
     strmask = psmask.*tmmask.*strmask1;
     strnum = psnum + tmnum + strnum1;
@@ -51,9 +50,9 @@ end
 fprintf('ifield %d all\n',ifield);
 strmask1 = maskdat.mask(ifield).m_max(20).strmask_stack;
 strnum1 = maskdat.mask(ifield).m_max(20).strnum_stack;
-[tmmask,tmnum] = make_mask_2m(flight,inst,band,ifield,20,23,Ith,...
+[tmmask,tmnum] = make_mask_2m(flight,inst,ifield,20,23,Ith,...
     'PSmatch',1,'verbose',false);
-[psmask,psnum] = make_mask_ps(flight,inst,band,ifield,0,20,23,Ith,'verbose',false);
+[psmask,psnum] = make_mask_ps(flight,inst,ifield,0,20,23,Ith,'verbose',false);
 
 strmask = psmask.*tmmask.*strmask1;
 strnum = psnum + tmnum + strnum1;
@@ -64,7 +63,7 @@ maskdat.mask(ifield).strnum_stack = strnum;
 
 save(strcat(loaddir,'maskdat'),'maskdat');
 end
-%}
+
 %% HSC
 
 flight = 40030;
